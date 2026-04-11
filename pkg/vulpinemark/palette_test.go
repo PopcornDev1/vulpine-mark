@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"sync"
 	"testing"
 )
 
@@ -106,6 +107,50 @@ func TestPaletteSwap(t *testing.T) {
 	if bytes.Equal(outDefault, outHC) {
 		t.Error("default and high-contrast outputs are identical; palette swap had no effect")
 	}
+}
+
+// TestSetPaletteConcurrentAnnotate hammers SetPalette from one
+// goroutine while another goroutine calls currentPalette() (the read
+// path used at the start of every annotate call). Run with -race to
+// verify there is no data race on the palette field. Annotate itself
+// can't be called without a live CDP connection, so we exercise the
+// same mutex-guarded accessor the annotate() snapshot relies on.
+func TestSetPaletteConcurrentAnnotate(t *testing.T) {
+	m := &Mark{}
+
+	const iterations = 5000
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	// Writer goroutine: cycles through palettes.
+	go func() {
+		defer wg.Done()
+		palettes := []Palette{
+			DefaultPalette,
+			HighContrastPalette,
+			MonochromePalette,
+			ColorblindSafePalette,
+		}
+		for i := 0; i < iterations; i++ {
+			m.SetPalette(palettes[i%len(palettes)])
+		}
+	}()
+
+	// Two reader goroutines: pull a palette snapshot like annotate()
+	// does at the start of every call.
+	for r := 0; r < 2; r++ {
+		go func() {
+			defer wg.Done()
+			for i := 0; i < iterations; i++ {
+				p := m.currentPalette()
+				// Touch a field so the read isn't optimized away and
+				// the race detector sees the access.
+				_ = p.Button
+			}
+		}()
+	}
+
+	wg.Wait()
 }
 
 func TestMarkSetPalette(t *testing.T) {
