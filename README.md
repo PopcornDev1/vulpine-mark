@@ -138,11 +138,11 @@ and keeping agent prompts focused on what actually changed.
 ```go
 before, _ := mark.Annotate(ctx)
 _ = mark.Click(ctx, "@3")
-
 after, _ := mark.AnnotateDiff(ctx, before)
-// after.Image only highlights elements that are new or moved
-// (e.g. a modal that popped up after the click). Labels are
-// prefixed with "*" so the agent can see they came from a diff.
+// after.Image highlights only new or moved elements.
+// Newly-appeared  elements are labeled "*@1", "*@2", ...
+// Moved elements are labeled "~@1", "~@2", ... so the agent
+// can tell fresh UI (e.g. a modal) from mere layout shifts.
 ```
 
 ### Palette packs
