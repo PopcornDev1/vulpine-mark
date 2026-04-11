@@ -47,6 +47,56 @@ result, err := mark.Annotate(context.Background())
 // result.Labels    - ordered []string
 ```
 
+## Example
+
+End-to-end: annotate the active page, persist the labeled PNG, then drive
+a click by label.
+
+```go
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/PopcornDev1/vulpine-mark/pkg/vulpinemark"
+)
+
+func main() {
+	// Connect to a running Chrome / Camoufox with --remote-debugging-port=9222.
+	mark, err := vulpinemark.New("http://localhost:9222")
+	if err != nil {
+		panic(err)
+	}
+	defer mark.Close()
+
+	// Capture the viewport and label every interactive element.
+	result, err := mark.Annotate()
+	if err != nil {
+		panic(err)
+	}
+	if err := os.WriteFile("annotated.png", result.Image, 0o644); err != nil {
+		panic(err)
+	}
+	fmt.Printf("labeled %d elements\n", len(result.Labels))
+
+	// Pick a label — an AI agent would read the PNG and reply with one.
+	if _, ok := result.Elements["@1"]; ok {
+		if err := mark.Click("@1"); err != nil {
+			panic(err)
+		}
+	}
+
+	// Type into a labeled input, then hover another element.
+	_ = mark.Type("@3", "hello world")
+	_ = mark.Hover("@7")
+}
+```
+
+Use `mark.AnnotateFullPage()` (or the `--full-page` CLI flag) to capture
+and label the entire scrollable page, including elements currently below
+the fold.
+
 ## Status
 
 Early MVP. Currently supports Chrome and Camoufox/foxbridge over CDP WebSocket. iOS Safari support is on the roadmap via [MobileBridge](https://github.com/PopcornDev1/mobilebridge).
