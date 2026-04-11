@@ -124,6 +124,7 @@ func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage, clustered b
 
 	m.mu.Lock()
 	maxEls := m.maxElements
+	useStable := m.stableLabels
 	m.mu.Unlock()
 
 	var clusters []Cluster
@@ -141,15 +142,23 @@ func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage, clustered b
 			}
 		}
 		ungrouped = applyMaxElements(ungrouped, len(clusters), maxEls)
-		offset := len(clusters)
-		for i := range ungrouped {
-			ungrouped[i].Label = labelFor(offset + i)
+		if useStable {
+			assignStableLabels(ungrouped)
+		} else {
+			offset := len(clusters)
+			for i := range ungrouped {
+				ungrouped[i].Label = labelFor(offset + i)
+			}
 		}
 		elements = ungrouped
 	} else {
 		elements = applyMaxElements(elements, 0, maxEls)
-		for i := range elements {
-			elements[i].Label = labelFor(i)
+		if useStable {
+			assignStableLabels(elements)
+		} else {
+			for i := range elements {
+				elements[i].Label = labelFor(i)
+			}
 		}
 	}
 
