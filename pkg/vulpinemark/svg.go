@@ -112,10 +112,19 @@ func (m *Mark) AnnotateSVG(ctx context.Context) (*Result, error) {
 	width := int(w * scale)
 	height := int(h * scale)
 
-	// Rebuild the element/cluster slices from the result. Elements map
-	// is label-keyed; Clusters list is preserved as-is.
+	// Rebuild the element slice from the result. Iterate via
+	// result.Labels (document order) rather than the Elements map so
+	// SVG z-order is deterministic across runs — map iteration in Go
+	// is intentionally randomized and would otherwise produce a
+	// different byte stream every call.
 	elements := make([]Element, 0, len(result.Elements))
-	for _, el := range result.Elements {
+	for _, label := range result.Labels {
+		el, ok := result.Elements[label]
+		if !ok {
+			// Cluster labels live in result.Labels but not in the
+			// per-element map; they are rendered from result.Clusters.
+			continue
+		}
 		elements = append(elements, el)
 	}
 	result.SVG = renderSVGOverlay(elements, result.Clusters, scale, width, height, m.currentPalette())
