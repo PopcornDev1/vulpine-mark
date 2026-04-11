@@ -17,8 +17,12 @@ import (
 type Mark struct {
 	c *cdpClient
 
-	mu         sync.Mutex
-	lastResult *Result
+	mu           sync.Mutex
+	lastResult   *Result
+	palette      Palette
+	paletteSet   bool
+	maxElements  int
+	stableLabels bool
 }
 
 // Result is the output of a single Annotate call.
@@ -138,7 +142,7 @@ func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage, clustered b
 		}
 	}
 
-	annotated, err := drawAnnotationsWithClusters(shot, elements, clusters, scale)
+	annotated, err := drawAnnotationsWithPalette(shot, elements, clusters, scale, m.currentPalette())
 	if err != nil {
 		return nil, err
 	}

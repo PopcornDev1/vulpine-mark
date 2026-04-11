@@ -14,40 +14,30 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-// roleColor returns the badge color for a given element role.
+// roleColor returns the badge color for a given element role under the
+// default palette. Kept for backwards compatibility; new code should
+// use Palette.ColorFor.
 func roleColor(role string) color.RGBA {
-	switch role {
-	case "button":
-		return color.RGBA{R: 34, G: 197, B: 94, A: 255} // green
-	case "link":
-		return color.RGBA{R: 59, G: 130, B: 246, A: 255} // blue
-	case "input", "textarea":
-		return color.RGBA{R: 168, G: 85, B: 247, A: 255} // purple
-	case "select":
-		return color.RGBA{R: 249, G: 115, B: 22, A: 255} // orange
-	case "checkbox", "radio", "switch":
-		return color.RGBA{R: 236, G: 72, B: 153, A: 255} // pink
-	default:
-		return color.RGBA{R: 100, G: 116, B: 139, A: 255} // slate
-	}
+	return DefaultPalette.ColorFor(role)
 }
 
 // drawAnnotations decodes pngBytes, paints labeled badges over each element,
 // and re-encodes to PNG. element coords are CSS pixels and are scaled to
 // screenshot pixels by scale.
 func drawAnnotations(pngBytes []byte, elements []Element, scale float64) ([]byte, error) {
-	return drawAnnotationsWithClusters(pngBytes, elements, nil, scale)
+	return drawAnnotationsWithPalette(pngBytes, elements, nil, scale, DefaultPalette)
 }
 
-// clusterColor is the palette used for cluster outlines / badges. It is
-// intentionally distinct from any roleColor so clustered groups stand
-// out from individual elements.
-var clusterColor = color.RGBA{R: 255, G: 200, B: 0, A: 255} // amber
-
-// drawAnnotationsWithClusters decodes pngBytes, paints labeled badges
-// over each ungrouped element and a single outline+badge per cluster,
-// and re-encodes to PNG.
+// drawAnnotationsWithClusters preserves the legacy signature and uses
+// the default palette.
 func drawAnnotationsWithClusters(pngBytes []byte, elements []Element, clusters []Cluster, scale float64) ([]byte, error) {
+	return drawAnnotationsWithPalette(pngBytes, elements, clusters, scale, DefaultPalette)
+}
+
+// drawAnnotationsWithPalette decodes pngBytes, paints labeled badges
+// over each ungrouped element and a single outline+badge per cluster,
+// and re-encodes to PNG. The palette controls role-to-color mapping.
+func drawAnnotationsWithPalette(pngBytes []byte, elements []Element, clusters []Cluster, scale float64, palette Palette) ([]byte, error) {
 	src, err := png.Decode(bytes.NewReader(pngBytes))
 	if err != nil {
 		return nil, fmt.Errorf("decode screenshot png: %w", err)
@@ -60,11 +50,11 @@ func drawAnnotationsWithClusters(pngBytes []byte, elements []Element, clusters [
 
 	for _, el := range elements {
 		low := el.Confidence > 0 && el.Confidence < 0.3
-		drawElementBadge(dst, el, scale, face, low)
+		drawElementBadge(dst, el, scale, face, low, palette)
 	}
 
 	for _, cl := range clusters {
-		drawClusterBadge(dst, cl, scale, face)
+		drawClusterBadge(dst, cl, scale, face, palette)
 	}
 
 	var buf bytes.Buffer
@@ -77,7 +67,7 @@ func drawAnnotationsWithClusters(pngBytes []byte, elements []Element, clusters [
 // drawElementBadge renders a single element's border + label. When
 // lowConfidence is true the badge is muted toward gray to signal
 // low-confidence grounding.
-func drawElementBadge(dst *image.RGBA, el Element, scale float64, face font.Face, lowConfidence bool) {
+func drawElementBadge(dst *image.RGBA, el Element, scale float64, face font.Face, lowConfidence bool, palette Palette) {
 	bx := int(el.X * scale)
 	by := int(el.Y * scale)
 	bw := int(el.Width * scale)
@@ -86,7 +76,7 @@ func drawElementBadge(dst *image.RGBA, el Element, scale float64, face font.Face
 		return
 	}
 
-	clr := roleColor(el.Role)
+	clr := palette.ColorFor(el.Role)
 	if lowConfidence {
 		clr = fadeToGray(clr)
 	}
@@ -119,7 +109,7 @@ func drawElementBadge(dst *image.RGBA, el Element, scale float64, face font.Face
 
 // drawClusterBadge renders a cluster outline + single "@N [1..count]"
 // badge at the top-left of the first member.
-func drawClusterBadge(dst *image.RGBA, cl Cluster, scale float64, face font.Face) {
+func drawClusterBadge(dst *image.RGBA, cl Cluster, scale float64, face font.Face, palette Palette) {
 	if len(cl.Members) == 0 {
 		return
 	}
@@ -128,7 +118,8 @@ func drawClusterBadge(dst *image.RGBA, cl Cluster, scale float64, face font.Face
 		return
 	}
 
-	// Dashed-style cluster outline in amber.
+	// Cluster outline in the palette cluster color.
+	clusterColor := palette.Cluster
 	drawRect(dst, bbox, clusterColor, 3)
 
 	// Single badge at the top-left of the first member (reading order).

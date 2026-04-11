@@ -21,6 +21,7 @@ func main() {
 		outputPNG  = flag.String("output", "annotated.png", "Path for the annotated PNG")
 		outputJSON = flag.String("json", "", "Optional path for the element map JSON")
 		fullPage   = flag.Bool("full-page", false, "Annotate the full scrollable page instead of just the viewport")
+		palette    = flag.String("palette", "default", "Color palette: default, high-contrast, monochrome, colorblind")
 		quiet      = flag.Bool("quiet", false, "Suppress progress output")
 	)
 	flag.Parse()
@@ -33,6 +34,12 @@ func main() {
 		fail("connect: %v", err)
 	}
 	defer mark.Close()
+
+	pal, err := vulpinemark.PaletteByName(*palette)
+	if err != nil {
+		fail("%v", err)
+	}
+	mark.SetPalette(pal)
 
 	if !*quiet {
 		fmt.Fprintf(os.Stderr, "vulpine-mark: connected to %s\n", *cdp)
