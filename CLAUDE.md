@@ -9,7 +9,7 @@ Standalone Go library + CLI that annotates browser screenshots with numbered bad
 - `pkg/vulpinemark/` — library
   - `cdp.go` — minimal gorilla/websocket CDP client, `/json/list` page-target auto-discovery
   - `enumerate.go` — `Runtime.evaluate` JS that finds visible interactive elements + accessible names
-  - `screenshot.go` — `Page.captureScreenshot` + `Page.getLayoutMetrics`
+  - `screenshot.go` — `Page.captureScreenshot` + `Page.getLayoutMetrics` + DPR probe
   - `annotate.go` — Go `image/draw` + `x/image/font/basicfont` for borders + numbered badges
   - `mark.go` — top-level `Mark.Annotate()` API
   - `actions.go` — click/type/hover helpers driven by labels
@@ -38,10 +38,10 @@ go test ./...
 
 ## Roadmap (MVP done; what's next)
 
-- [ ] Real-page integration test (Chrome headless via testcontainers or similar)
-- [ ] Unit tests for `enumerate` JS (snapshot test against fixture HTML)
+- [x] Real-page integration test (fake CDP transport, gated on `-tags integration`)
+- [x] Unit tests for `enumerate` JS (selector snapshot + fixture-response decode)
 - [x] Full-page mode (scroll + stitch screenshots, label off-viewport elements)
-- [ ] DPR scaling fix for Retina screenshots (currently uses visualViewport.scale; verify on macOS)
+- [x] DPR scaling fix for Retina screenshots (`viewportSize` now returns `visualViewport.scale * devicePixelRatio`)
 - [x] Element visibility: occlusion check (elementFromPoint at center)
 - [x] Click-by-label helper: `mark.Click(ctx, "@3")` dispatches mouse event at element center
 - [x] Type-by-label helper: `mark.Type(ctx, "@5", "hello")`

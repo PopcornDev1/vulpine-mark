@@ -29,7 +29,7 @@ go install github.com/PopcornDev1/vulpine-mark/cmd/vulpine-mark@latest
 
 ```bash
 # Connect to a running browser, annotate the active page
-vulpine-mark --cdp ws://localhost:9222 --output annotated.png --json elements.json
+vulpine-mark --cdp http://localhost:9222 --output annotated.png --json elements.json
 ```
 
 ## Library usage
@@ -41,7 +41,7 @@ import (
 )
 
 ctx := context.Background()
-mark, err := vulpinemark.New(ctx, "ws://localhost:9222")
+mark, err := vulpinemark.New(ctx, "http://localhost:9222")
 if err != nil { panic(err) }
 defer mark.Close()
 
