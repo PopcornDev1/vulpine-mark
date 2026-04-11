@@ -104,6 +104,53 @@ Use `mark.AnnotateFullPage()` (or the `--full-page` CLI flag) to capture
 and label the entire scrollable page, including elements currently below
 the fold.
 
+### Cluster mode
+
+A typical product grid or list of search results has dozens of visually
+identical items. Labeling each one individually drowns the agent in
+`@1`, `@2`, `@3`... `@47` label soup. **Cluster mode** detects
+repeated shapes and groups them under a single label — members are
+accessed with bracket syntax.
+
+```go
+result, err := mark.AnnotateClustered(ctx)
+// result.Clusters[0].Label == "@1"
+// result.Clusters[0].Members has N Elements
+
+// Click the 3rd item in cluster @1.
+_ = mark.Click(ctx, "@1[3]")
+```
+
+The annotated image draws a single amber outline around the union of
+all cluster members plus one `@N[1..count]` badge at the top-left,
+instead of one badge per member. Elements that don't fit any cluster
+are labeled individually as before.
+
+### Diff mode
+
+Given a previous `Result` from an earlier annotate, `AnnotateDiff`
+re-captures the page and labels **only** elements that are new or have
+moved. Useful for modal detection, before/after action verification,
+and keeping agent prompts focused on what actually changed.
+
+```go
+before, _ := mark.Annotate(ctx)
+_ = mark.Click(ctx, "@3")
+
+after, _ := mark.AnnotateDiff(ctx, before)
+// after.Image only highlights elements that are new or moved
+// (e.g. a modal that popped up after the click). Labels are
+// prefixed with "*" so the agent can see they came from a diff.
+```
+
+### Confidence scores
+
+Every `Element` returned by the library carries a `Confidence` field
+in `[0, 1]` computed from an accessible-name presence, `aria-label`,
+area, occlusion, and clipped-overflow status. Labels with confidence
+below `0.3` are rendered in a muted gray so the agent knows to be
+cautious about acting on them.
+
 ## Status
 
 Early MVP. Currently supports Chrome and Camoufox/foxbridge over CDP WebSocket. iOS Safari support is on the roadmap via [MobileBridge](https://github.com/PopcornDev1/mobilebridge).

@@ -34,12 +34,17 @@ go test ./...
 
 - [ ] Real-page integration test (Chrome headless via testcontainers or similar)
 - [ ] Unit tests for `enumerate` JS (snapshot test against fixture HTML)
-- [ ] Full-page mode (scroll + stitch screenshots, label off-viewport elements)
+- [x] Full-page mode (scroll + stitch screenshots, label off-viewport elements)
 - [ ] DPR scaling fix for Retina screenshots (currently uses visualViewport.scale; verify on macOS)
-- [ ] Element visibility: occlusion check (elementFromPoint at center)
-- [ ] Click-by-label helper: `mark.Click("@3", cdpClient)` dispatches mouse event at element center
-- [ ] Type-by-label helper: `mark.Type("@5", "hello")`
+- [x] Element visibility: occlusion check (elementFromPoint at center)
+- [x] Click-by-label helper: `mark.Click(ctx, "@3")` dispatches mouse event at element center
+- [x] Type-by-label helper: `mark.Type(ctx, "@5", "hello")`
+- [x] Scroll-into-view before action (reuses viewport metrics)
+- [x] Context-aware action helpers (all methods take `ctx context.Context`)
+- [x] Cluster mode: group repeated items under `@N[K]` labels
+- [x] Diff mode: annotate only what changed between two snapshots
+- [x] Per-label confidence score + low-confidence fade
 - [ ] Output formats: SVG overlay, JSON-only mode, base64 stdout
-- [ ] CLI: `--full-page`, `--include`/`--exclude` selectors, `--max-elements`
+- [ ] CLI: `--include`/`--exclude` selectors, `--max-elements`, `--clustered`, `--diff`
 - [ ] Doc: example annotated PNG in README
 - [ ] GitHub Actions CI (build, vet, test on linux/macos)
