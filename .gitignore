@@ -1,0 +1,10 @@
+vulpine-mark
+/bin/
+/dist/
+*.test
+*.out
+*.png
+!docs/**/*.png
+.DS_Store
+.idea/
+.vscode/
