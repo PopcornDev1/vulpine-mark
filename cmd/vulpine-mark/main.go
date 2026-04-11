@@ -20,6 +20,7 @@ func main() {
 		cdp        = flag.String("cdp", "http://localhost:9222", "CDP endpoint (http://host:port or ws://...)")
 		outputPNG  = flag.String("output", "annotated.png", "Path for the annotated PNG")
 		outputJSON = flag.String("json", "", "Optional path for the element map JSON")
+		outputSVG  = flag.String("svg", "", "Optional path for an SVG overlay composite-able onto the screenshot")
 		fullPage   = flag.Bool("full-page", false, "Annotate the full scrollable page instead of just the viewport")
 		palette    = flag.String("palette", "default", "Color palette: default, high-contrast, monochrome, colorblind")
 		quiet      = flag.Bool("quiet", false, "Suppress progress output")
@@ -46,9 +47,12 @@ func main() {
 	}
 
 	var result *vulpinemark.Result
-	if *fullPage {
+	switch {
+	case *fullPage:
 		result, err = mark.AnnotateFullPage(ctx)
-	} else {
+	case *outputSVG != "":
+		result, err = mark.AnnotateSVG(ctx)
+	default:
 		result, err = mark.Annotate(ctx)
 	}
 	if err != nil {

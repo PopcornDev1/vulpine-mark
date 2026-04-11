@@ -40,6 +40,10 @@ type Result struct {
 	// Clusters lists the grouped repeated-element clusters, in cluster-
 	// number order. nil for non-clustered results.
 	Clusters []Cluster
+	// SVG, if populated, is a vector overlay (borders + labels) sized
+	// to match Image's dimensions. Set by AnnotateSVG. Empty for
+	// plain Annotate calls.
+	SVG string
 }
 
 // New connects to the given CDP endpoint. Endpoint may be:
