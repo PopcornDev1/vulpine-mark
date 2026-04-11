@@ -3,7 +3,11 @@
 // instead of guessing pixel coordinates.
 package vulpinemark
 
-import "sync"
+import (
+	"context"
+	"net/http"
+	"sync"
+)
 
 // Mark is a connection to a CDP-speaking browser. Construct one with New
 // and call Annotate to capture and label the active page. A Mark is safe
@@ -30,8 +34,22 @@ type Result struct {
 //   - a page-level WebSocket URL (ws://host:port/devtools/page/<id>)
 //   - a browser-level HTTP URL (http://host:port) — the first page target
 //     is auto-discovered via /json/list
-func New(endpoint string) (*Mark, error) {
-	c, err := dialCDP(endpoint)
+//
+// The provided context governs the dial (and /json/list discovery, if
+// applicable) only. Subsequent calls take their own context.
+func New(ctx context.Context, endpoint string) (*Mark, error) {
+	c, err := dialCDP(ctx, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &Mark{c: c}, nil
+}
+
+// NewWithClient is like New but uses the supplied *http.Client for the
+// /json/list discovery step. Useful for tests and for configuring
+// custom transports, timeouts, or TLS settings.
+func NewWithClient(ctx context.Context, endpoint string, client *http.Client) (*Mark, error) {
+	c, err := dialCDP(ctx, endpoint, client)
 	if err != nil {
 		return nil, err
 	}
@@ -45,20 +63,20 @@ func (m *Mark) Close() error {
 
 // Annotate captures the current viewport, enumerates visible interactive
 // elements, and returns a labeled PNG plus element map.
-func (m *Mark) Annotate() (*Result, error) {
-	return m.annotate(true, false)
+func (m *Mark) Annotate(ctx context.Context) (*Result, error) {
+	return m.annotate(ctx, true, false)
 }
 
 // AnnotateFullPage captures the entire scrollable page (not just the
 // viewport) and labels every interactive element on it, including those
 // currently scrolled off-screen. Uses Page.captureScreenshot with
 // captureBeyondViewport=true.
-func (m *Mark) AnnotateFullPage() (*Result, error) {
-	return m.annotate(false, true)
+func (m *Mark) AnnotateFullPage(ctx context.Context) (*Result, error) {
+	return m.annotate(ctx, false, true)
 }
 
-func (m *Mark) annotate(viewportOnly, fullPage bool) (*Result, error) {
-	elements, err := m.c.enumerate(viewportOnly)
+func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage bool) (*Result, error) {
+	elements, err := m.c.enumerate(ctx, viewportOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -68,15 +86,15 @@ func (m *Mark) annotate(viewportOnly, fullPage bool) (*Result, error) {
 
 	var shot []byte
 	if fullPage {
-		shot, err = m.c.captureFullPageScreenshot()
+		shot, err = m.c.captureFullPageScreenshot(ctx)
 	} else {
-		shot, err = m.c.captureScreenshot()
+		shot, err = m.c.captureScreenshot(ctx)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	_, _, scale, err := m.c.viewportSize()
+	_, _, scale, err := m.c.viewportSize(ctx)
 	if err != nil {
 		// Non-fatal: assume 1.0 if layout metrics unavailable.
 		scale = 1.0

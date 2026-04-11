@@ -4,10 +4,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/PopcornDev1/vulpine-mark/pkg/vulpinemark"
 )
@@ -22,7 +25,10 @@ func main() {
 	)
 	flag.Parse()
 
-	mark, err := vulpinemark.New(*cdp)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	mark, err := vulpinemark.New(ctx, *cdp)
 	if err != nil {
 		fail("connect: %v", err)
 	}
@@ -34,9 +40,9 @@ func main() {
 
 	var result *vulpinemark.Result
 	if *fullPage {
-		result, err = mark.AnnotateFullPage()
+		result, err = mark.AnnotateFullPage(ctx)
 	} else {
-		result, err = mark.Annotate()
+		result, err = mark.Annotate(ctx)
 	}
 	if err != nil {
 		fail("annotate: %v", err)

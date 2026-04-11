@@ -1,6 +1,7 @@
 package vulpinemark
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -36,9 +37,9 @@ func (e Element) center() (float64, float64) {
 	return e.X + e.W/2, e.Y + e.H/2
 }
 
-// Click looks up the element by label and dispatches a mousePressed →
+// Click looks up the element by label and dispatches a mousePressed ->
 // mouseReleased pair at its center via CDP Input.dispatchMouseEvent.
-func (m *Mark) Click(label string) error {
+func (m *Mark) Click(ctx context.Context, label string) error {
 	el, err := m.lookupLabel(label)
 	if err != nil {
 		return err
@@ -53,7 +54,7 @@ func (m *Mark) Click(label string) error {
 		"buttons":    1,
 		"clickCount": 1,
 	}
-	if err := m.c.call("Input.dispatchMouseEvent", press, nil); err != nil {
+	if err := m.c.callCtx(ctx, "Input.dispatchMouseEvent", press, nil); err != nil {
 		return fmt.Errorf("Input.dispatchMouseEvent mousePressed: %w", err)
 	}
 
@@ -65,7 +66,7 @@ func (m *Mark) Click(label string) error {
 		"buttons":    0,
 		"clickCount": 1,
 	}
-	if err := m.c.call("Input.dispatchMouseEvent", release, nil); err != nil {
+	if err := m.c.callCtx(ctx, "Input.dispatchMouseEvent", release, nil); err != nil {
 		return fmt.Errorf("Input.dispatchMouseEvent mouseReleased: %w", err)
 	}
 	return nil
@@ -74,20 +75,24 @@ func (m *Mark) Click(label string) error {
 // Type clicks the element by label and then dispatches Input.insertText to
 // enter the provided text. This is the simplest cross-browser "type"
 // primitive CDP offers and doesn't depend on per-key layout mapping.
-func (m *Mark) Type(label string, text string) error {
-	if err := m.Click(label); err != nil {
+func (m *Mark) Type(ctx context.Context, label string, text string) error {
+	if err := m.Click(ctx, label); err != nil {
 		return err
 	}
 	// Give the page a brief moment to register focus.
-	time.Sleep(20 * time.Millisecond)
-	if err := m.c.call("Input.insertText", map[string]interface{}{"text": text}, nil); err != nil {
+	select {
+	case <-time.After(20 * time.Millisecond):
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	if err := m.c.callCtx(ctx, "Input.insertText", map[string]interface{}{"text": text}, nil); err != nil {
 		return fmt.Errorf("Input.insertText: %w", err)
 	}
 	return nil
 }
 
 // Hover dispatches a mouseMoved event at the element's center.
-func (m *Mark) Hover(label string) error {
+func (m *Mark) Hover(ctx context.Context, label string) error {
 	el, err := m.lookupLabel(label)
 	if err != nil {
 		return err
@@ -100,7 +105,7 @@ func (m *Mark) Hover(label string) error {
 		"button":  "none",
 		"buttons": 0,
 	}
-	if err := m.c.call("Input.dispatchMouseEvent", params, nil); err != nil {
+	if err := m.c.callCtx(ctx, "Input.dispatchMouseEvent", params, nil); err != nil {
 		return fmt.Errorf("Input.dispatchMouseEvent mouseMoved: %w", err)
 	}
 	return nil

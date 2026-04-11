@@ -1,17 +1,18 @@
 package vulpinemark
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 )
 
 // captureScreenshot returns a PNG of the current viewport.
-func (c *cdpClient) captureScreenshot() ([]byte, error) {
+func (c *cdpClient) captureScreenshot(ctx context.Context) ([]byte, error) {
 	type result struct {
 		Data string `json:"data"`
 	}
 	var res result
-	err := c.call("Page.captureScreenshot", map[string]interface{}{
+	err := c.callCtx(ctx, "Page.captureScreenshot", map[string]interface{}{
 		"format":      "png",
 		"fromSurface": true,
 	}, &res)
@@ -30,12 +31,12 @@ func (c *cdpClient) captureScreenshot() ([]byte, error) {
 
 // captureFullPageScreenshot returns a PNG of the entire scrollable page
 // by using Page.captureScreenshot with captureBeyondViewport=true.
-func (c *cdpClient) captureFullPageScreenshot() ([]byte, error) {
+func (c *cdpClient) captureFullPageScreenshot(ctx context.Context) ([]byte, error) {
 	type result struct {
 		Data string `json:"data"`
 	}
 	var res result
-	err := c.call("Page.captureScreenshot", map[string]interface{}{
+	err := c.callCtx(ctx, "Page.captureScreenshot", map[string]interface{}{
 		"format":                "png",
 		"fromSurface":           true,
 		"captureBeyondViewport": true,
@@ -56,7 +57,7 @@ func (c *cdpClient) captureFullPageScreenshot() ([]byte, error) {
 // viewportSize fetches the current visual viewport in CSS pixels and the
 // device pixel ratio so we can map element rects (CSS px) onto screenshot
 // pixels.
-func (c *cdpClient) viewportSize() (width, height float64, scale float64, err error) {
+func (c *cdpClient) viewportSize(ctx context.Context) (width, height float64, scale float64, err error) {
 	type layout struct {
 		VisualViewport struct {
 			ClientWidth  float64 `json:"clientWidth"`
@@ -65,7 +66,7 @@ func (c *cdpClient) viewportSize() (width, height float64, scale float64, err er
 		} `json:"visualViewport"`
 	}
 	var res layout
-	if err := c.call("Page.getLayoutMetrics", nil, &res); err != nil {
+	if err := c.callCtx(ctx, "Page.getLayoutMetrics", nil, &res); err != nil {
 		return 0, 0, 0, fmt.Errorf("Page.getLayoutMetrics: %w", err)
 	}
 	s := res.VisualViewport.Scale

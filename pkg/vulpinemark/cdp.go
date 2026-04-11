@@ -1,6 +1,7 @@
 package vulpinemark
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,10 @@ import (
 
 	"github.com/gorilla/websocket"
 )
+
+// defaultCallTimeout is the per-call timeout used by call() when the
+// caller-provided context has no deadline of its own.
+const defaultCallTimeout = 30 * time.Second
 
 type cdpClient struct {
 	conn   *websocket.Conn
@@ -29,6 +34,10 @@ type cdpClient struct {
 
 	closeOnce sync.Once
 	closed    chan struct{}
+
+	// httpClient is used for /json/list discovery. May be nil, in which
+	// case a default client is used.
+	httpClient *http.Client
 }
 
 type rpcRequest struct {
@@ -53,8 +62,8 @@ func (e *rpcError) Error() string {
 	return fmt.Sprintf("cdp error %d: %s", e.Code, e.Message)
 }
 
-func dialCDP(endpoint string) (*cdpClient, error) {
-	wsURL, err := resolveWSURL(endpoint)
+func dialCDP(ctx context.Context, endpoint string, httpClient *http.Client) (*cdpClient, error) {
+	wsURL, err := resolveWSURL(ctx, endpoint, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -64,22 +73,23 @@ func dialCDP(endpoint string) (*cdpClient, error) {
 		ReadBufferSize:   1 << 20,
 		WriteBufferSize:  1 << 20,
 	}
-	conn, _, err := dialer.Dial(wsURL, nil)
+	conn, _, err := dialer.DialContext(ctx, wsURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("dial %s: %w", wsURL, err)
 	}
 	conn.SetReadLimit(64 << 20)
 
 	c := &cdpClient{
-		conn:    conn,
-		pending: make(map[int64]chan rpcResponse),
-		closed:  make(chan struct{}),
+		conn:       conn,
+		pending:    make(map[int64]chan rpcResponse),
+		closed:     make(chan struct{}),
+		httpClient: httpClient,
 	}
 	go c.readLoop()
 	return c, nil
 }
 
-func resolveWSURL(endpoint string) (string, error) {
+func resolveWSURL(ctx context.Context, endpoint string, httpClient *http.Client) (string, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return "", fmt.Errorf("parse endpoint: %w", err)
@@ -88,7 +98,7 @@ func resolveWSURL(endpoint string) (string, error) {
 	case "ws", "wss":
 		return endpoint, nil
 	case "http", "https":
-		return discoverPageWS(u)
+		return discoverPageWS(ctx, u, httpClient)
 	default:
 		return "", fmt.Errorf("unsupported scheme %q (use http://, https://, ws://, or wss://)", u.Scheme)
 	}
@@ -98,20 +108,27 @@ func resolveWSURL(endpoint string) (string, error) {
 // payloads are a few KB; anything beyond this is hostile or broken.
 const discoverListLimit = 1 << 20 // 1 MiB
 
-func discoverPageWS(base *url.URL) (string, error) {
+func discoverPageWS(ctx context.Context, base *url.URL, httpClient *http.Client) (string, error) {
 	listURL := *base
 	listURL.Path = "/json/list"
 
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 1 {
-				return errors.New("/json/list: redirects not allowed")
-			}
-			return nil
-		},
+	client := httpClient
+	if client == nil {
+		client = &http.Client{
+			Timeout: 10 * time.Second,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if len(via) >= 1 {
+					return errors.New("/json/list: redirects not allowed")
+				}
+				return nil
+			},
+		}
 	}
-	resp, err := client.Get(listURL.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, listURL.String(), nil)
+	if err != nil {
+		return "", fmt.Errorf("build request: %w", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("GET %s: %w", listURL.String(), err)
 	}
@@ -119,9 +136,12 @@ func discoverPageWS(base *url.URL) (string, error) {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return "", fmt.Errorf("GET %s: status %d", listURL.String(), resp.StatusCode)
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, discoverListLimit))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, discoverListLimit+1))
 	if err != nil {
 		return "", err
+	}
+	if int64(len(body)) > discoverListLimit {
+		return "", fmt.Errorf("GET %s: body exceeds %d bytes", listURL.String(), discoverListLimit)
 	}
 	var targets []struct {
 		Type                 string `json:"type"`
@@ -174,7 +194,16 @@ func (c *cdpClient) failPending(err error) {
 	}
 }
 
-func (c *cdpClient) call(method string, params interface{}, out interface{}) error {
+// callCtx dispatches a CDP method and waits for the response, honoring
+// the provided context for cancellation. If ctx has no deadline, a
+// defaultCallTimeout is applied.
+func (c *cdpClient) callCtx(ctx context.Context, method string, params interface{}, out interface{}) error {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, defaultCallTimeout)
+		defer cancel()
+	}
+
 	id := atomic.AddInt64(&c.nextID, 1)
 	ch := make(chan rpcResponse, 1)
 
@@ -185,6 +214,9 @@ func (c *cdpClient) call(method string, params interface{}, out interface{}) err
 	req := rpcRequest{ID: id, Method: method, Params: params}
 	data, err := json.Marshal(req)
 	if err != nil {
+		c.mu.Lock()
+		delete(c.pending, id)
+		c.mu.Unlock()
 		return err
 	}
 	c.writeMu.Lock()
@@ -211,11 +243,11 @@ func (c *cdpClient) call(method string, params interface{}, out interface{}) err
 		delete(c.pending, id)
 		c.mu.Unlock()
 		return fmt.Errorf("cdp call %s: connection closed", method)
-	case <-time.After(30 * time.Second):
+	case <-ctx.Done():
 		c.mu.Lock()
 		delete(c.pending, id)
 		c.mu.Unlock()
-		return fmt.Errorf("cdp call %s timed out", method)
+		return fmt.Errorf("cdp call %s: %w", method, ctx.Err())
 	}
 }
 

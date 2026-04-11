@@ -35,13 +35,17 @@ vulpine-mark --cdp ws://localhost:9222 --output annotated.png --json elements.js
 ## Library usage
 
 ```go
-import "github.com/PopcornDev1/vulpine-mark/pkg/vulpinemark"
+import (
+    "context"
+    "github.com/PopcornDev1/vulpine-mark/pkg/vulpinemark"
+)
 
-mark, err := vulpinemark.New("ws://localhost:9222")
+ctx := context.Background()
+mark, err := vulpinemark.New(ctx, "ws://localhost:9222")
 if err != nil { panic(err) }
 defer mark.Close()
 
-result, err := mark.Annotate()
+result, err := mark.Annotate(ctx)
 // result.Image     - annotated PNG bytes
 // result.Elements  - map[string]Element keyed by "@N"
 // result.Labels    - ordered []string
@@ -56,6 +60,7 @@ a click by label.
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -63,15 +68,17 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
+
 	// Connect to a running Chrome / Camoufox with --remote-debugging-port=9222.
-	mark, err := vulpinemark.New("http://localhost:9222")
+	mark, err := vulpinemark.New(ctx, "http://localhost:9222")
 	if err != nil {
 		panic(err)
 	}
 	defer mark.Close()
 
 	// Capture the viewport and label every interactive element.
-	result, err := mark.Annotate()
+	result, err := mark.Annotate(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -82,14 +89,14 @@ func main() {
 
 	// Pick a label — an AI agent would read the PNG and reply with one.
 	if _, ok := result.Elements["@1"]; ok {
-		if err := mark.Click("@1"); err != nil {
+		if err := mark.Click(ctx, "@1"); err != nil {
 			panic(err)
 		}
 	}
 
 	// Type into a labeled input, then hover another element.
-	_ = mark.Type("@3", "hello world")
-	_ = mark.Hover("@7")
+	_ = mark.Type(ctx, "@3", "hello world")
+	_ = mark.Hover(ctx, "@7")
 }
 ```
 

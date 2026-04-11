@@ -1,6 +1,7 @@
 package vulpinemark
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -131,7 +132,7 @@ const enumerateJSTemplate = `
 // enumerate returns the visible interactive elements on the active page,
 // in document order. Labels are not yet assigned. When viewportOnly is
 // true, elements outside the current viewport are filtered out.
-func (c *cdpClient) enumerate(viewportOnly bool) ([]Element, error) {
+func (c *cdpClient) enumerate(ctx context.Context, viewportOnly bool) ([]Element, error) {
 	type evalResult struct {
 		Result struct {
 			Type  string          `json:"type"`
@@ -144,7 +145,7 @@ func (c *cdpClient) enumerate(viewportOnly bool) ([]Element, error) {
 
 	var res evalResult
 	expr := fmt.Sprintf(enumerateJSTemplate, viewportOnly)
-	err := c.call("Runtime.evaluate", map[string]interface{}{
+	err := c.callCtx(ctx, "Runtime.evaluate", map[string]interface{}{
 		"expression":    expr,
 		"returnByValue": true,
 		"awaitPromise":  false,
@@ -164,4 +165,51 @@ func (c *cdpClient) enumerate(viewportOnly bool) ([]Element, error) {
 		return nil, fmt.Errorf("decode elements: %w", err)
 	}
 	return elements, nil
+}
+
+// scrollX reads window.scrollX via Runtime.evaluate.
+func (c *cdpClient) scrollX(ctx context.Context) (float64, error) {
+	return c.evalFloat(ctx, "window.scrollX")
+}
+
+// scrollY reads window.scrollY via Runtime.evaluate.
+func (c *cdpClient) scrollY(ctx context.Context) (float64, error) {
+	return c.evalFloat(ctx, "window.scrollY")
+}
+
+// scrollTo performs a synchronous window.scrollTo to the given page
+// offsets (CSS pixels).
+func (c *cdpClient) scrollTo(ctx context.Context, x, y float64) error {
+	expr := fmt.Sprintf("window.scrollTo(%f, %f)", x, y)
+	return c.callCtx(ctx, "Runtime.evaluate", map[string]interface{}{
+		"expression":    expr,
+		"returnByValue": true,
+		"awaitPromise":  false,
+	}, nil)
+}
+
+func (c *cdpClient) evalFloat(ctx context.Context, expr string) (float64, error) {
+	type evalResult struct {
+		Result struct {
+			Type  string          `json:"type"`
+			Value json.RawMessage `json:"value"`
+		} `json:"result"`
+	}
+	var res evalResult
+	err := c.callCtx(ctx, "Runtime.evaluate", map[string]interface{}{
+		"expression":    expr,
+		"returnByValue": true,
+		"awaitPromise":  false,
+	}, &res)
+	if err != nil {
+		return 0, err
+	}
+	if len(res.Result.Value) == 0 {
+		return 0, nil
+	}
+	var f float64
+	if err := json.Unmarshal(res.Result.Value, &f); err != nil {
+		return 0, err
+	}
+	return f, nil
 }
