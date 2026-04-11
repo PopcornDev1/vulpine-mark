@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
 	"sync"
 )
 
@@ -121,6 +122,10 @@ func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage, clustered b
 		scale = 1.0
 	}
 
+	m.mu.Lock()
+	maxEls := m.maxElements
+	m.mu.Unlock()
+
 	var clusters []Cluster
 	if clustered {
 		var ungrouped []Element
@@ -135,12 +140,14 @@ func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage, clustered b
 				clusters[i].Members[j].Label = fmt.Sprintf("%s[%d]", clusters[i].Label, j+1)
 			}
 		}
+		ungrouped = applyMaxElements(ungrouped, len(clusters), maxEls)
 		offset := len(clusters)
 		for i := range ungrouped {
 			ungrouped[i].Label = labelFor(offset + i)
 		}
 		elements = ungrouped
 	} else {
+		elements = applyMaxElements(elements, 0, maxEls)
 		for i := range elements {
 			elements[i].Label = labelFor(i)
 		}
@@ -171,6 +178,61 @@ func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage, clustered b
 	m.lastResult = result
 	m.mu.Unlock()
 	return result, nil
+}
+
+// SetMaxElements caps the number of elements that will be labeled in
+// subsequent Annotate calls. When the enumerator returns more
+// elements than the cap, the lowest-confidence ones are dropped
+// until the cap is met. Clusters are counted as one each toward the
+// cap so a dense grid does not exhaust the budget. A value of 0 (the
+// default) disables the cap.
+func (m *Mark) SetMaxElements(n int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if n < 0 {
+		n = 0
+	}
+	m.maxElements = n
+}
+
+// applyMaxElements drops the lowest-confidence entries from els until
+// len(els)+clusterCount <= max. Returns the pruned slice. Order of
+// surviving elements is preserved so label assignment stays in
+// document order.
+func applyMaxElements(els []Element, clusterCount, max int) []Element {
+	if max <= 0 {
+		return els
+	}
+	budget := max - clusterCount
+	if budget < 0 {
+		budget = 0
+	}
+	if len(els) <= budget {
+		return els
+	}
+	type indexed struct {
+		i int
+		e Element
+	}
+	ix := make([]indexed, len(els))
+	for i, e := range els {
+		ix[i] = indexed{i: i, e: e}
+	}
+	sort.SliceStable(ix, func(a, b int) bool {
+		return ix[a].e.Confidence > ix[b].e.Confidence
+	})
+	if budget > len(ix) {
+		budget = len(ix)
+	}
+	kept := ix[:budget]
+	sort.SliceStable(kept, func(a, b int) bool {
+		return kept[a].i < kept[b].i
+	})
+	out := make([]Element, len(kept))
+	for i, k := range kept {
+		out[i] = k.e
+	}
+	return out
 }
 
 // LastResult returns the Result from the most recent successful Annotate
