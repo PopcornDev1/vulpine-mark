@@ -22,10 +22,38 @@ func TestDiffElements_NewAndMoved(t *testing.T) {
 	}
 	texts := map[string]bool{}
 	for _, c := range changed {
-		texts[c.Text] = true
+		texts[c.Element.Text] = true
 	}
 	if !texts["Home"] || !texts["Close"] {
 		t.Errorf("changed texts = %v, want {Home, Close}", texts)
+	}
+}
+
+// TestDiffMovedVsNew exercises the new vs moved classification. The
+// "Home" link has the same identity in both snapshots but shifts
+// beyond the diff rounding bucket → DiffMoved. The "Close" button
+// appears only in current → DiffNew.
+func TestDiffMovedVsNew(t *testing.T) {
+	prev := []Element{
+		{Tag: "a", Role: "link", Text: "Home", X: 10, Y: 50, Width: 60, Height: 20},
+	}
+	current := []Element{
+		{Tag: "a", Role: "link", Text: "Home", X: 210, Y: 50, Width: 60, Height: 20},
+		{Tag: "button", Role: "button", Text: "Close", X: 300, Y: 300, Width: 30, Height: 30},
+	}
+	entries := diffElements(prev, current)
+	if len(entries) != 2 {
+		t.Fatalf("len = %d, want 2", len(entries))
+	}
+	byText := map[string]DiffKind{}
+	for _, e := range entries {
+		byText[e.Element.Text] = e.Kind
+	}
+	if byText["Home"] != DiffMoved {
+		t.Errorf("Home kind = %v, want DiffMoved", byText["Home"])
+	}
+	if byText["Close"] != DiffNew {
+		t.Errorf("Close kind = %v, want DiffNew", byText["Close"])
 	}
 }
 
@@ -43,8 +71,11 @@ func TestDiffModeNewElements(t *testing.T) {
 	if len(changed) != 1 {
 		t.Fatalf("expected 1 changed element, got %d", len(changed))
 	}
-	if changed[0].Text != "Modal" {
-		t.Errorf("changed[0].Text = %q, want Modal", changed[0].Text)
+	if changed[0].Element.Text != "Modal" {
+		t.Errorf("changed[0].Element.Text = %q, want Modal", changed[0].Element.Text)
+	}
+	if changed[0].Kind != DiffNew {
+		t.Errorf("Modal should be DiffNew, got %v", changed[0].Kind)
 	}
 }
 
