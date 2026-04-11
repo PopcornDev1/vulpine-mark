@@ -5,6 +5,7 @@ package vulpinemark
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 )
@@ -24,10 +25,17 @@ type Mark struct {
 type Result struct {
 	// Image is the annotated screenshot encoded as PNG.
 	Image []byte
-	// Elements maps "@N" labels to their element metadata.
+	// Elements maps "@N" labels to their element metadata. In clustered
+	// results this contains only the ungrouped (non-cluster) elements.
 	Elements map[string]Element
-	// Labels lists all labels in document order.
+	// Labels lists all top-level labels in document order. For clustered
+	// results, cluster labels (e.g. "@5") appear here alongside ordinary
+	// element labels; individual cluster members are addressed with
+	// "@5[1]", "@5[2]", ... via Click/Type/Hover.
 	Labels []string
+	// Clusters lists the grouped repeated-element clusters, in cluster-
+	// number order. nil for non-clustered results.
+	Clusters []Cluster
 }
 
 // New connects to the given CDP endpoint. Endpoint may be:
@@ -64,7 +72,7 @@ func (m *Mark) Close() error {
 // Annotate captures the current viewport, enumerates visible interactive
 // elements, and returns a labeled PNG plus element map.
 func (m *Mark) Annotate(ctx context.Context) (*Result, error) {
-	return m.annotate(ctx, true, false)
+	return m.annotate(ctx, true, false, false)
 }
 
 // AnnotateFullPage captures the entire scrollable page (not just the
@@ -72,16 +80,21 @@ func (m *Mark) Annotate(ctx context.Context) (*Result, error) {
 // currently scrolled off-screen. Uses Page.captureScreenshot with
 // captureBeyondViewport=true.
 func (m *Mark) AnnotateFullPage(ctx context.Context) (*Result, error) {
-	return m.annotate(ctx, false, true)
+	return m.annotate(ctx, false, true, false)
 }
 
-func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage bool) (*Result, error) {
+// AnnotateClustered behaves like Annotate but groups visually similar
+// repeated elements (e.g. a product grid or list of search results)
+// under a single cluster label. Individual cluster members are
+// addressed via "@N[K]" syntax with Click, Type, and Hover.
+func (m *Mark) AnnotateClustered(ctx context.Context) (*Result, error) {
+	return m.annotate(ctx, true, false, true)
+}
+
+func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage, clustered bool) (*Result, error) {
 	elements, err := m.c.enumerate(ctx, viewportOnly)
 	if err != nil {
 		return nil, err
-	}
-	for i := range elements {
-		elements[i].Label = labelFor(i)
 	}
 
 	var shot []byte
@@ -100,13 +113,41 @@ func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage bool) (*Resu
 		scale = 1.0
 	}
 
-	annotated, err := drawAnnotations(shot, elements, scale)
+	var clusters []Cluster
+	if clustered {
+		var ungrouped []Element
+		clusters, ungrouped = clusterElements(elements)
+		// Reassign clusters as the lowest labels, then give the
+		// remaining ungrouped elements labels continuing after the
+		// last cluster.
+		for i := range clusters {
+			clusters[i].Label = labelFor(i)
+			clusters[i].BBox = clusterBBox(clusters[i].Members, scale)
+			for j := range clusters[i].Members {
+				clusters[i].Members[j].Label = fmt.Sprintf("%s[%d]", clusters[i].Label, j+1)
+			}
+		}
+		offset := len(clusters)
+		for i := range ungrouped {
+			ungrouped[i].Label = labelFor(offset + i)
+		}
+		elements = ungrouped
+	} else {
+		for i := range elements {
+			elements[i].Label = labelFor(i)
+		}
+	}
+
+	annotated, err := drawAnnotationsWithClusters(shot, elements, clusters, scale)
 	if err != nil {
 		return nil, err
 	}
 
 	byLabel := make(map[string]Element, len(elements))
-	labels := make([]string, 0, len(elements))
+	labels := make([]string, 0, len(elements)+len(clusters))
+	for _, cl := range clusters {
+		labels = append(labels, cl.Label)
+	}
 	for _, el := range elements {
 		byLabel[el.Label] = el
 		labels = append(labels, el.Label)
@@ -116,6 +157,7 @@ func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage bool) (*Resu
 		Image:    annotated,
 		Elements: byLabel,
 		Labels:   labels,
+		Clusters: clusters,
 	}
 	m.mu.Lock()
 	m.lastResult = result

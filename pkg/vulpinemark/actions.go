@@ -17,7 +17,10 @@ var ErrLabelNotFound = errors.New("vulpinemark: label not found in last annotati
 
 // lookupLabel returns the cached element for a label, or an error if
 // Annotate has not yet been called or the label is unknown. Safe for
-// concurrent use.
+// concurrent use. Supports plain labels ("@7") and cluster member
+// references ("@5[3]") — the latter returns the 3rd member of cluster
+// @5 and errors with ErrClusterIndexOutOfRange if the index is past the
+// cluster's size.
 func (m *Mark) lookupLabel(label string) (Element, error) {
 	m.mu.Lock()
 	last := m.lastResult
@@ -25,6 +28,21 @@ func (m *Mark) lookupLabel(label string) (Element, error) {
 	if last == nil {
 		return Element{}, ErrNoAnnotation
 	}
+
+	if clusterLabel, memberIdx, ok := parseClusterRef(label); ok {
+		for _, cl := range last.Clusters {
+			if cl.Label != clusterLabel {
+				continue
+			}
+			if memberIdx > len(cl.Members) {
+				return Element{}, fmt.Errorf("%w: %q has %d members",
+					ErrClusterIndexOutOfRange, clusterLabel, len(cl.Members))
+			}
+			return cl.Members[memberIdx-1], nil
+		}
+		return Element{}, fmt.Errorf("%w: %q", ErrLabelNotFound, clusterLabel)
+	}
+
 	el, ok := last.Elements[label]
 	if !ok {
 		return Element{}, fmt.Errorf("%w: %q", ErrLabelNotFound, label)

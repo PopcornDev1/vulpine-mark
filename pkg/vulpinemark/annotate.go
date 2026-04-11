@@ -36,6 +36,18 @@ func roleColor(role string) color.RGBA {
 // and re-encodes to PNG. element coords are CSS pixels and are scaled to
 // screenshot pixels by scale.
 func drawAnnotations(pngBytes []byte, elements []Element, scale float64) ([]byte, error) {
+	return drawAnnotationsWithClusters(pngBytes, elements, nil, scale)
+}
+
+// clusterColor is the palette used for cluster outlines / badges. It is
+// intentionally distinct from any roleColor so clustered groups stand
+// out from individual elements.
+var clusterColor = color.RGBA{R: 255, G: 200, B: 0, A: 255} // amber
+
+// drawAnnotationsWithClusters decodes pngBytes, paints labeled badges
+// over each ungrouped element and a single outline+badge per cluster,
+// and re-encodes to PNG.
+func drawAnnotationsWithClusters(pngBytes []byte, elements []Element, clusters []Cluster, scale float64) ([]byte, error) {
 	src, err := png.Decode(bytes.NewReader(pngBytes))
 	if err != nil {
 		return nil, fmt.Errorf("decode screenshot png: %w", err)
@@ -47,44 +59,11 @@ func drawAnnotations(pngBytes []byte, elements []Element, scale float64) ([]byte
 	face := basicfont.Face7x13
 
 	for _, el := range elements {
-		// Element box in screenshot pixels.
-		bx := int(el.X * scale)
-		by := int(el.Y * scale)
-		bw := int(el.Width * scale)
-		bh := int(el.Height * scale)
-		if bw <= 0 || bh <= 0 {
-			continue
-		}
+		drawElementBadge(dst, el, scale, face, false)
+	}
 
-		clr := roleColor(el.Role)
-
-		// Translucent border around the element.
-		drawRect(dst, image.Rect(bx, by, bx+bw, by+bh), color.RGBA{R: clr.R, G: clr.G, B: clr.B, A: 200}, 2)
-
-		// Badge sized to fit the label text.
-		label := el.Label
-		textW := font.MeasureString(face, label).Round()
-		badgeW := textW + 8
-		badgeH := 16
-		badgeX := bx
-		badgeY := by - badgeH
-		if badgeY < 0 {
-			badgeY = by
-		}
-
-		drawFilledRect(dst, image.Rect(badgeX, badgeY, badgeX+badgeW, badgeY+badgeH), clr)
-
-		// White label text on the badge.
-		drawer := &font.Drawer{
-			Dst:  dst,
-			Src:  image.NewUniform(color.White),
-			Face: face,
-			Dot: fixed.Point26_6{
-				X: fixed.I(badgeX + 4),
-				Y: fixed.I(badgeY + badgeH - 4),
-			},
-		}
-		drawer.DrawString(label)
+	for _, cl := range clusters {
+		drawClusterBadge(dst, cl, scale, face)
 	}
 
 	var buf bytes.Buffer
@@ -92,6 +71,104 @@ func drawAnnotations(pngBytes []byte, elements []Element, scale float64) ([]byte
 		return nil, fmt.Errorf("encode annotated png: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+// drawElementBadge renders a single element's border + label. When
+// lowConfidence is true the badge is muted toward gray to signal
+// low-confidence grounding.
+func drawElementBadge(dst *image.RGBA, el Element, scale float64, face font.Face, lowConfidence bool) {
+	bx := int(el.X * scale)
+	by := int(el.Y * scale)
+	bw := int(el.Width * scale)
+	bh := int(el.Height * scale)
+	if bw <= 0 || bh <= 0 {
+		return
+	}
+
+	clr := roleColor(el.Role)
+	if lowConfidence {
+		clr = fadeToGray(clr)
+	}
+
+	drawRect(dst, image.Rect(bx, by, bx+bw, by+bh), color.RGBA{R: clr.R, G: clr.G, B: clr.B, A: 200}, 2)
+
+	label := el.Label
+	textW := font.MeasureString(face, label).Round()
+	badgeW := textW + 8
+	badgeH := 16
+	badgeX := bx
+	badgeY := by - badgeH
+	if badgeY < 0 {
+		badgeY = by
+	}
+
+	drawFilledRect(dst, image.Rect(badgeX, badgeY, badgeX+badgeW, badgeY+badgeH), clr)
+
+	drawer := &font.Drawer{
+		Dst:  dst,
+		Src:  image.NewUniform(color.White),
+		Face: face,
+		Dot: fixed.Point26_6{
+			X: fixed.I(badgeX + 4),
+			Y: fixed.I(badgeY + badgeH - 4),
+		},
+	}
+	drawer.DrawString(label)
+}
+
+// drawClusterBadge renders a cluster outline + single "@N [1..count]"
+// badge at the top-left of the first member.
+func drawClusterBadge(dst *image.RGBA, cl Cluster, scale float64, face font.Face) {
+	if len(cl.Members) == 0 {
+		return
+	}
+	bbox := clusterBBox(cl.Members, scale)
+	if bbox.Dx() <= 0 || bbox.Dy() <= 0 {
+		return
+	}
+
+	// Dashed-style cluster outline in amber.
+	drawRect(dst, bbox, clusterColor, 3)
+
+	// Single badge at the top-left of the first member (reading order).
+	first := cl.Members[0]
+	bx := int(first.X * scale)
+	by := int(first.Y * scale)
+
+	label := fmt.Sprintf("%s[1..%d]", cl.Label, len(cl.Members))
+	textW := font.MeasureString(face, label).Round()
+	badgeW := textW + 8
+	badgeH := 16
+	badgeX := bx
+	badgeY := by - badgeH
+	if badgeY < 0 {
+		badgeY = by
+	}
+
+	drawFilledRect(dst, image.Rect(badgeX, badgeY, badgeX+badgeW, badgeY+badgeH), clusterColor)
+
+	drawer := &font.Drawer{
+		Dst:  dst,
+		Src:  image.NewUniform(color.Black),
+		Face: face,
+		Dot: fixed.Point26_6{
+			X: fixed.I(badgeX + 4),
+			Y: fixed.I(badgeY + badgeH - 4),
+		},
+	}
+	drawer.DrawString(label)
+}
+
+// fadeToGray blends the given color halfway toward a neutral slate gray,
+// used for low-confidence labels.
+func fadeToGray(c color.RGBA) color.RGBA {
+	const gr, gg, gb = 148, 163, 184 // slate-400
+	return color.RGBA{
+		R: uint8((int(c.R) + gr) / 2),
+		G: uint8((int(c.G) + gg) / 2),
+		B: uint8((int(c.B) + gb) / 2),
+		A: c.A,
+	}
 }
 
 // drawRect paints a hollow rectangle of the given thickness.
