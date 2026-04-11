@@ -34,7 +34,7 @@ func (m *Mark) lookupLabel(label string) (Element, error) {
 
 // center returns the CSS-pixel center coordinates of the element.
 func (e Element) center() (float64, float64) {
-	return e.X + e.W/2, e.Y + e.H/2
+	return e.X + e.Width/2, e.Y + e.Height/2
 }
 
 // Click looks up the element by label and dispatches a mousePressed ->

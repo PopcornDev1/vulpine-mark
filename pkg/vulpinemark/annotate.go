@@ -50,8 +50,8 @@ func drawAnnotations(pngBytes []byte, elements []Element, scale float64) ([]byte
 		// Element box in screenshot pixels.
 		bx := int(el.X * scale)
 		by := int(el.Y * scale)
-		bw := int(el.W * scale)
-		bh := int(el.H * scale)
+		bw := int(el.Width * scale)
+		bh := int(el.Height * scale)
 		if bw <= 0 || bh <= 0 {
 			continue
 		}

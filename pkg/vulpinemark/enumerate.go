@@ -8,14 +8,24 @@ import (
 
 // Element describes a single interactive element on the page.
 type Element struct {
-	Label string  `json:"label"` // e.g. "@1"
-	Tag   string  `json:"tag"`   // a, button, input, select, textarea
-	Role  string  `json:"role"`  // button, link, input, select, etc.
-	Text  string  `json:"text"`  // best-effort accessible name
-	X     float64 `json:"x"`
-	Y     float64 `json:"y"`
-	W     float64 `json:"w"`
-	H     float64 `json:"h"`
+	// Label is the assigned badge identifier, e.g. "@1".
+	Label string `json:"label"`
+	// Tag is the lowercase HTML tag name (a, button, input, select, textarea).
+	Tag string `json:"tag"`
+	// Role is the semantic role of the element (button, link, input, etc).
+	Role string `json:"role"`
+	// Text is the best-effort accessible name of the element.
+	Text string `json:"text"`
+	// X is the viewport-relative CSS-pixel left of the bounding rect.
+	X float64 `json:"x"`
+	// Y is the viewport-relative CSS-pixel top of the bounding rect.
+	Y float64 `json:"y"`
+	// Width is the element's CSS-pixel width. JSON tag stays "w" for wire
+	// compatibility.
+	Width float64 `json:"w"`
+	// Height is the element's CSS-pixel height. JSON tag stays "h" for wire
+	// compatibility.
+	Height float64 `json:"h"`
 }
 
 // enumerateJSTemplate is rendered with %t for the viewport-filter toggle.

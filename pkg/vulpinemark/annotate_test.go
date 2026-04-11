@@ -64,7 +64,7 @@ func TestDrawAnnotations_smoke(t *testing.T) {
 	}
 
 	elements := []Element{
-		{Label: "@1", Tag: "button", Role: "button", Text: "OK", X: 10, Y: 10, W: 40, H: 20},
+		{Label: "@1", Tag: "button", Role: "button", Text: "OK", X: 10, Y: 10, Width: 40, Height: 20},
 	}
 	out, err := drawAnnotations(buf.Bytes(), elements, 1.0)
 	if err != nil {
@@ -89,7 +89,7 @@ func TestDrawAnnotations_emptyElements(t *testing.T) {
 		t.Fatalf("encode: %v", err)
 	}
 	elements := []Element{
-		{Label: "@1", Role: "button", X: 0, Y: 0, W: 0, H: 0},
+		{Label: "@1", Role: "button", X: 0, Y: 0, Width: 0, Height: 0},
 	}
 	if _, err := drawAnnotations(buf.Bytes(), elements, 1.0); err != nil {
 		t.Fatalf("drawAnnotations with zero-size element: %v", err)
@@ -119,7 +119,7 @@ func TestStripDataURI(t *testing.T) {
 }
 
 func TestElementCenter(t *testing.T) {
-	e := Element{X: 10, Y: 20, W: 40, H: 60}
+	e := Element{X: 10, Y: 20, Width: 40, Height: 60}
 	cx, cy := e.center()
 	if cx != 30 || cy != 50 {
 		t.Errorf("center() = (%v,%v), want (30,50)", cx, cy)
