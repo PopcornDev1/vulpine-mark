@@ -26,7 +26,7 @@ go test ./...
 
 - Push only to `PopcornDev1/vulpine-mark`. Never touch `CloverLabsAI` or any other org.
 - One-line commit messages, no co-authors, push after every cohesive change.
-- This repo is **public** — no proprietary VulpineOS internals here. Don't reference vault, audiobridge internals, or any private patches in code or docs.
+- This repo is **public** — no proprietary VulpineOS internals here. Don't reference any private VulpineOS internals or private patches in code or docs.
 - The native Juggler implementation lives in VulpineOS itself (private). This repo is the standalone CDP version only.
 - Autonomous /loop mode: never ask permission, act and document in commits.
 
