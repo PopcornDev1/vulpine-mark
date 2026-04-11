@@ -26,6 +26,13 @@ type Element struct {
 	// Height is the element's CSS-pixel height. JSON tag stays "h" for wire
 	// compatibility.
 	Height float64 `json:"h"`
+	// Confidence is a heuristic score in [0,1] indicating how reliably
+	// an AI agent can target this element. Low-confidence elements are
+	// faded to gray in the annotated image so agents know to be
+	// cautious. Computed by enumerate.js from: presence of an
+	// accessible name, explicit aria-label, area, occlusion status,
+	// and whether the element lives in a clipped overflow.
+	Confidence float64 `json:"confidence"`
 }
 
 // enumerateJSTemplate is rendered with %t for the viewport-filter toggle.
@@ -83,6 +90,40 @@ const enumerateJSTemplate = `
     return true;
   }
 
+  // isInClippedOverflow walks up the ancestors looking for a block
+  // with overflow:hidden/clip/auto/scroll whose clip rect doesn't
+  // contain the element's center. Best-effort; returns false on
+  // ambiguity.
+  function isInClippedOverflow(el, rect) {
+    let p = el.parentElement;
+    while (p) {
+      const ps = window.getComputedStyle(p);
+      const ov = ps.overflow + ps.overflowX + ps.overflowY;
+      if (/hidden|clip|scroll|auto/.test(ov)) {
+        const pr = p.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        if (cx < pr.left || cx > pr.right || cy < pr.top || cy > pr.bottom) {
+          return true;
+        }
+      }
+      p = p.parentElement;
+    }
+    return false;
+  }
+
+  function confidenceFor(el, rect, hasName, occluded, clipped) {
+    let s = 0;
+    if (hasName) s += 0.3;
+    if (el.getAttribute && el.getAttribute('aria-label')) s += 0.2;
+    if (rect.width * rect.height > 100) s += 0.2;
+    if (!occluded) s += 0.2;
+    if (!clipped) s += 0.1;
+    if (s > 1) s = 1;
+    if (s < 0) s = 0;
+    return s;
+  }
+
   function classify(el) {
     const tag = el.tagName.toLowerCase();
     const role = (el.getAttribute && el.getAttribute('role')) || '';
@@ -126,18 +167,67 @@ const enumerateJSTemplate = `
     const rect = el.getBoundingClientRect();
     const style = window.getComputedStyle(el);
     if (!isVisible(el, rect, style)) continue;
-    if (isOccluded(el, rect)) continue;
+    const occluded = isOccluded(el, rect);
+    if (occluded) continue;
     const { tag, role } = classify(el);
     let text = nameOf(el);
     if (text.length > 80) text = text.slice(0, 77) + '...';
+    const clipped = isInClippedOverflow(el, rect);
+    const conf = confidenceFor(el, rect, text.length > 0, occluded, clipped);
     out.push({
       tag, role, text,
-      x: rect.left, y: rect.top, w: rect.width, h: rect.height
+      x: rect.left, y: rect.top, w: rect.width, h: rect.height,
+      confidence: conf
     });
   }
   return JSON.stringify(out);
 })(%t)
 `
+
+// confidenceSignals is a Go mirror of the JavaScript confidence
+// scoring logic for unit-test purposes. Production code uses the JS
+// implementation inside enumerateJSTemplate — keep the two in sync.
+type confidenceSignals struct {
+	HasName     bool
+	HasAriaAttr bool
+	Area        float64
+	Occluded    bool
+	Clipped     bool
+}
+
+// computeConfidence returns a score in [0,1] from the given signals.
+// Weights mirror confidenceFor() in enumerateJSTemplate:
+//
+//	+0.3 has accessible name
+//	+0.2 has aria-label
+//	+0.2 area > 100 px
+//	+0.2 not occluded
+//	+0.1 not clipped
+func computeConfidence(s confidenceSignals) float64 {
+	score := 0.0
+	if s.HasName {
+		score += 0.3
+	}
+	if s.HasAriaAttr {
+		score += 0.2
+	}
+	if s.Area > 100 {
+		score += 0.2
+	}
+	if !s.Occluded {
+		score += 0.2
+	}
+	if !s.Clipped {
+		score += 0.1
+	}
+	if score > 1 {
+		score = 1
+	}
+	if score < 0 {
+		score = 0
+	}
+	return score
+}
 
 // enumerate returns the visible interactive elements on the active page,
 // in document order. Labels are not yet assigned. When viewportOnly is

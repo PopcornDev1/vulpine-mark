@@ -59,7 +59,8 @@ func drawAnnotationsWithClusters(pngBytes []byte, elements []Element, clusters [
 	face := basicfont.Face7x13
 
 	for _, el := range elements {
-		drawElementBadge(dst, el, scale, face, false)
+		low := el.Confidence > 0 && el.Confidence < 0.3
+		drawElementBadge(dst, el, scale, face, low)
 	}
 
 	for _, cl := range clusters {
