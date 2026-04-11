@@ -44,7 +44,9 @@ go test ./...
 - [x] Cluster mode: group repeated items under `@N[K]` labels
 - [x] Diff mode: annotate only what changed between two snapshots
 - [x] Per-label confidence score + low-confidence fade
-- [ ] Output formats: SVG overlay, JSON-only mode, base64 stdout
-- [ ] CLI: `--include`/`--exclude` selectors, `--max-elements`, `--clustered`, `--diff`
+- [x] Output formats: SVG overlay (`AnnotateSVG`, `--svg`); JSON-only mode, base64 stdout still TODO
+- [x] Palette packs: default / high-contrast / monochrome / colorblind (`SetPalette`, `--palette`)
+- [x] Stable semantic-hash labels (`UseStableLabels`)
+- [x] CLI: `--max-elements`, `--clustered`, `--diff`, `--save-result` (selectors still TODO)
 - [ ] Doc: example annotated PNG in README
 - [ ] GitHub Actions CI (build, vet, test on linux/macos)

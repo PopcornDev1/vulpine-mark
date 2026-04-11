@@ -143,6 +143,72 @@ after, _ := mark.AnnotateDiff(ctx, before)
 // prefixed with "*" so the agent can see they came from a diff.
 ```
 
+### Palette packs
+
+Four built-in color palettes ship with the library: `DefaultPalette`,
+`HighContrastPalette`, `MonochromePalette`, and `ColorblindSafePalette`
+(Wong, Nature Methods 2011). Swap palettes at runtime:
+
+```go
+mark.SetPalette(vulpinemark.ColorblindSafePalette)
+```
+
+From the CLI:
+
+```bash
+vulpine-mark --palette colorblind --output annotated.png
+# Also: default, high-contrast, monochrome
+```
+
+The palette controls element badges and the cluster outline color, so
+downstream color-based filters (e.g. "find all buttons") stay consistent
+no matter which scheme you pick.
+
+### SVG overlay output
+
+`AnnotateSVG` returns the same `Result` populated with a vector
+overlay in `Result.SVG`. The overlay is sized to match the raster
+screenshot so frontends can layer it with CSS and toggle labels on
+and off:
+
+```go
+result, _ := mark.AnnotateSVG(ctx)
+os.WriteFile("overlay.svg", []byte(result.SVG), 0o644)
+```
+
+Or via CLI:
+
+```bash
+vulpine-mark --svg overlay.svg --output screenshot.png
+```
+
+### Stable labels across re-renders
+
+By default, labels are assigned by enumeration order, so `@5` may
+refer to a different element after a re-annotate if elements shift.
+Opt into semantic-hash labels:
+
+```go
+mark.UseStableLabels(true)
+```
+
+Labels are then derived from `(role, accessible-name, rounded-x,
+rounded-y)`, so the same logical element keeps the same label across
+re-renders as long as its role, name, and rough position are
+unchanged. Useful for long-running agent loops that re-annotate
+between every action.
+
+### Max elements cap
+
+On dense pages, cap the number of labeled elements so the agent
+prompt stays readable. Clusters count as one each toward the cap;
+the lowest-confidence elements are dropped first.
+
+```go
+mark.SetMaxElements(20)
+// or --max-elements 20
+```
+
 ### Confidence scores
 
 Every `Element` returned by the library carries a `Confidence` field
