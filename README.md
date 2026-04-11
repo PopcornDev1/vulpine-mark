@@ -41,7 +41,7 @@ mark, err := vulpinemark.New("ws://localhost:9222")
 if err != nil { panic(err) }
 defer mark.Close()
 
-result, err := mark.Annotate(context.Background())
+result, err := mark.Annotate()
 // result.Image     - annotated PNG bytes
 // result.Elements  - map[string]Element keyed by "@N"
 // result.Labels    - ordered []string

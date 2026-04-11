@@ -19,6 +19,11 @@ type cdpClient struct {
 	conn   *websocket.Conn
 	nextID int64
 
+	// writeMu serializes WriteMessage calls. gorilla/websocket
+	// explicitly forbids concurrent writers — without this, two
+	// concurrent call() invocations would corrupt frames or panic.
+	writeMu sync.Mutex
+
 	mu      sync.Mutex
 	pending map[int64]chan rpcResponse
 
@@ -89,15 +94,32 @@ func resolveWSURL(endpoint string) (string, error) {
 	}
 }
 
+// discoverListLimit caps the /json/list response size. Real Chrome
+// payloads are a few KB; anything beyond this is hostile or broken.
+const discoverListLimit = 1 << 20 // 1 MiB
+
 func discoverPageWS(base *url.URL) (string, error) {
 	listURL := *base
 	listURL.Path = "/json/list"
-	resp, err := http.Get(listURL.String())
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 1 {
+				return errors.New("/json/list: redirects not allowed")
+			}
+			return nil
+		},
+	}
+	resp, err := client.Get(listURL.String())
 	if err != nil {
 		return "", fmt.Errorf("GET %s: %w", listURL.String(), err)
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("GET %s: status %d", listURL.String(), resp.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, discoverListLimit))
 	if err != nil {
 		return "", err
 	}
@@ -165,11 +187,14 @@ func (c *cdpClient) call(method string, params interface{}, out interface{}) err
 	if err != nil {
 		return err
 	}
-	if err := c.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+	c.writeMu.Lock()
+	werr := c.conn.WriteMessage(websocket.TextMessage, data)
+	c.writeMu.Unlock()
+	if werr != nil {
 		c.mu.Lock()
 		delete(c.pending, id)
 		c.mu.Unlock()
-		return err
+		return werr
 	}
 
 	select {
@@ -181,6 +206,11 @@ func (c *cdpClient) call(method string, params interface{}, out interface{}) err
 			return json.Unmarshal(resp.Result, out)
 		}
 		return nil
+	case <-c.closed:
+		c.mu.Lock()
+		delete(c.pending, id)
+		c.mu.Unlock()
+		return fmt.Errorf("cdp call %s: connection closed", method)
 	case <-time.After(30 * time.Second):
 		c.mu.Lock()
 		delete(c.pending, id)

@@ -3,10 +3,16 @@
 // instead of guessing pixel coordinates.
 package vulpinemark
 
+import "sync"
+
 // Mark is a connection to a CDP-speaking browser. Construct one with New
-// and call Annotate to capture and label the active page.
+// and call Annotate to capture and label the active page. A Mark is safe
+// to use from multiple goroutines: the cdp transport serializes writes
+// and the cached lastResult is guarded by a mutex.
 type Mark struct {
-	c          *cdpClient
+	c *cdpClient
+
+	mu         sync.Mutex
 	lastResult *Result
 }
 
@@ -93,12 +99,16 @@ func (m *Mark) annotate(viewportOnly, fullPage bool) (*Result, error) {
 		Elements: byLabel,
 		Labels:   labels,
 	}
+	m.mu.Lock()
 	m.lastResult = result
+	m.mu.Unlock()
 	return result, nil
 }
 
 // LastResult returns the Result from the most recent successful Annotate
 // call, or nil if Annotate has not been called yet.
 func (m *Mark) LastResult() *Result {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	return m.lastResult
 }

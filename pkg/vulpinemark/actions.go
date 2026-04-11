@@ -1,19 +1,32 @@
 package vulpinemark
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
 
+// ErrNoAnnotation is returned by action methods when Annotate has not
+// yet been called on this Mark.
+var ErrNoAnnotation = errors.New("vulpinemark: no cached annotation; call Annotate first")
+
+// ErrLabelNotFound is returned when a label like "@7" does not exist
+// in the most recent annotation result.
+var ErrLabelNotFound = errors.New("vulpinemark: label not found in last annotation")
+
 // lookupLabel returns the cached element for a label, or an error if
-// Annotate has not yet been called or the label is unknown.
+// Annotate has not yet been called or the label is unknown. Safe for
+// concurrent use.
 func (m *Mark) lookupLabel(label string) (Element, error) {
-	if m.lastResult == nil {
-		return Element{}, fmt.Errorf("no cached annotation; call Annotate first")
+	m.mu.Lock()
+	last := m.lastResult
+	m.mu.Unlock()
+	if last == nil {
+		return Element{}, ErrNoAnnotation
 	}
-	el, ok := m.lastResult.Elements[label]
+	el, ok := last.Elements[label]
 	if !ok {
-		return Element{}, fmt.Errorf("label %q not found in last annotation", label)
+		return Element{}, fmt.Errorf("%w: %q", ErrLabelNotFound, label)
 	}
 	return el, nil
 }
