@@ -6,7 +6,8 @@ package vulpinemark
 // Mark is a connection to a CDP-speaking browser. Construct one with New
 // and call Annotate to capture and label the active page.
 type Mark struct {
-	c *cdpClient
+	c          *cdpClient
+	lastResult *Result
 }
 
 // Result is the output of a single Annotate call.
@@ -70,9 +71,17 @@ func (m *Mark) Annotate() (*Result, error) {
 		labels = append(labels, el.Label)
 	}
 
-	return &Result{
+	result := &Result{
 		Image:    annotated,
 		Elements: byLabel,
 		Labels:   labels,
-	}, nil
+	}
+	m.lastResult = result
+	return result, nil
+}
+
+// LastResult returns the Result from the most recent successful Annotate
+// call, or nil if Annotate has not been called yet.
+func (m *Mark) LastResult() *Result {
+	return m.lastResult
 }
