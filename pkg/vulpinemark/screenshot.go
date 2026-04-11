@@ -28,6 +28,31 @@ func (c *cdpClient) captureScreenshot() ([]byte, error) {
 	return png, nil
 }
 
+// captureFullPageScreenshot returns a PNG of the entire scrollable page
+// by using Page.captureScreenshot with captureBeyondViewport=true.
+func (c *cdpClient) captureFullPageScreenshot() ([]byte, error) {
+	type result struct {
+		Data string `json:"data"`
+	}
+	var res result
+	err := c.call("Page.captureScreenshot", map[string]interface{}{
+		"format":                "png",
+		"fromSurface":           true,
+		"captureBeyondViewport": true,
+	}, &res)
+	if err != nil {
+		return nil, fmt.Errorf("Page.captureScreenshot (full page): %w", err)
+	}
+	if res.Data == "" {
+		return nil, fmt.Errorf("Page.captureScreenshot returned empty data")
+	}
+	png, err := base64.StdEncoding.DecodeString(stripDataURI(res.Data))
+	if err != nil {
+		return nil, fmt.Errorf("decode screenshot base64: %w", err)
+	}
+	return png, nil
+}
+
 // viewportSize fetches the current visual viewport in CSS pixels and the
 // device pixel ratio so we can map element rects (CSS px) onto screenshot
 // pixels.

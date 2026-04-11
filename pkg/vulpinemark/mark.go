@@ -40,7 +40,19 @@ func (m *Mark) Close() error {
 // Annotate captures the current viewport, enumerates visible interactive
 // elements, and returns a labeled PNG plus element map.
 func (m *Mark) Annotate() (*Result, error) {
-	elements, err := m.c.enumerate()
+	return m.annotate(true, false)
+}
+
+// AnnotateFullPage captures the entire scrollable page (not just the
+// viewport) and labels every interactive element on it, including those
+// currently scrolled off-screen. Uses Page.captureScreenshot with
+// captureBeyondViewport=true.
+func (m *Mark) AnnotateFullPage() (*Result, error) {
+	return m.annotate(false, true)
+}
+
+func (m *Mark) annotate(viewportOnly, fullPage bool) (*Result, error) {
+	elements, err := m.c.enumerate(viewportOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +60,12 @@ func (m *Mark) Annotate() (*Result, error) {
 		elements[i].Label = labelFor(i)
 	}
 
-	shot, err := m.c.captureScreenshot()
+	var shot []byte
+	if fullPage {
+		shot, err = m.c.captureFullPageScreenshot()
+	} else {
+		shot, err = m.c.captureScreenshot()
+	}
 	if err != nil {
 		return nil, err
 	}

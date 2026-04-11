@@ -17,8 +17,11 @@ type Element struct {
 	H     float64 `json:"h"`
 }
 
-const enumerateJS = `
-(() => {
+// enumerateJSTemplate is rendered with %t for the viewport-filter toggle.
+// When the flag is false, elements outside the current viewport are kept
+// (full-page mode). In both modes occlusion is checked via elementFromPoint.
+const enumerateJSTemplate = `
+((viewportOnly) => {
   const SELECTOR = [
     'a[href]',
     'button',
@@ -45,9 +48,27 @@ const enumerateJS = `
     if (style.display === 'none') return false;
     if (style.visibility === 'hidden' || style.visibility === 'collapse') return false;
     if (parseFloat(style.opacity || '1') < 0.05) return false;
-    if (rect.bottom < 0 || rect.right < 0) return false;
-    if (rect.left > vw || rect.top > vh) return false;
+    if (viewportOnly) {
+      if (rect.bottom < 0 || rect.right < 0) return false;
+      if (rect.left > vw || rect.top > vh) return false;
+    }
     if (el.getAttribute && el.getAttribute('aria-hidden') === 'true') return false;
+    return true;
+  }
+
+  // isOccluded returns true if elementFromPoint at the center of rect
+  // returns a node that is neither the candidate nor one of its
+  // descendants. Only runs for elements currently inside the viewport —
+  // elementFromPoint is undefined for points outside the visible area.
+  function isOccluded(el, rect) {
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    if (cx < 0 || cy < 0 || cx > vw || cy > vh) return false;
+    const hit = document.elementFromPoint(cx, cy);
+    if (!hit) return false;
+    if (hit === el) return false;
+    if (el.contains && el.contains(hit)) return false;
+    if (hit.contains && hit.contains(el)) return false;
     return true;
   }
 
@@ -94,6 +115,7 @@ const enumerateJS = `
     const rect = el.getBoundingClientRect();
     const style = window.getComputedStyle(el);
     if (!isVisible(el, rect, style)) continue;
+    if (isOccluded(el, rect)) continue;
     const { tag, role } = classify(el);
     let text = nameOf(el);
     if (text.length > 80) text = text.slice(0, 77) + '...';
@@ -103,12 +125,13 @@ const enumerateJS = `
     });
   }
   return JSON.stringify(out);
-})()
+})(%t)
 `
 
 // enumerate returns the visible interactive elements on the active page,
-// in document order. Labels are not yet assigned.
-func (c *cdpClient) enumerate() ([]Element, error) {
+// in document order. Labels are not yet assigned. When viewportOnly is
+// true, elements outside the current viewport are filtered out.
+func (c *cdpClient) enumerate(viewportOnly bool) ([]Element, error) {
 	type evalResult struct {
 		Result struct {
 			Type  string          `json:"type"`
@@ -120,8 +143,9 @@ func (c *cdpClient) enumerate() ([]Element, error) {
 	}
 
 	var res evalResult
+	expr := fmt.Sprintf(enumerateJSTemplate, viewportOnly)
 	err := c.call("Runtime.evaluate", map[string]interface{}{
-		"expression":    enumerateJS,
+		"expression":    expr,
 		"returnByValue": true,
 		"awaitPromise":  false,
 	}, &res)
