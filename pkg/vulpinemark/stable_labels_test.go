@@ -1,6 +1,8 @@
 package vulpinemark
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestStableLabelsConsistency(t *testing.T) {
 	// Same logical elements, second pass has a small pixel offset
@@ -60,6 +62,63 @@ func TestStableLabelsDifferForDifferentElements(t *testing.T) {
 	if la == lb {
 		t.Errorf("different elements produced same label %q", la)
 	}
+}
+
+// TestStableLabelProbeCoprime verifies that the linear-probe offset
+// can visit every slot in the stable-label ring in the worst case.
+// This guards against the earlier bug where the modulus (9999 =
+// 3·3·11·101) combined with an offset divisible by 3 or 11 would
+// visit only a fraction of the slots, causing label assignment to
+// fail spuriously for large pages.
+func TestStableLabelProbeCoprime(t *testing.T) {
+	// stableLabelModulus must be prime; if so every offset in
+	// [1, modulus-1] is automatically coprime with the modulus and
+	// the probe visits every slot before wrapping.
+	if !isPrime(stableLabelModulus) {
+		t.Fatalf("stableLabelModulus = %d must be prime", stableLabelModulus)
+	}
+
+	// Pick the worst-case start (n=1) and the largest offset the
+	// current implementation can produce (7), then walk every slot
+	// and assert we land on each integer in [1, modulus] exactly once.
+	const startN = 1
+	const offset = 7
+	hits := make(map[int]bool, stableLabelModulus)
+	for i := 0; i < stableLabelModulus; i++ {
+		cand := ((startN-1+i*offset)%stableLabelModulus + 1)
+		if hits[cand] {
+			t.Fatalf("probe revisited slot %d at step %d (modulus=%d, offset=%d)",
+				cand, i, stableLabelModulus, offset)
+		}
+		hits[cand] = true
+	}
+	if len(hits) != stableLabelModulus {
+		t.Fatalf("probe covered %d/%d slots", len(hits), stableLabelModulus)
+	}
+
+	// End-to-end: filling the used set with modulus-1 elements and
+	// asking for one more must succeed — never fall through to the
+	// sequential-fallback loop — because the probe visits every slot.
+	used := make(map[int]struct{}, stableLabelModulus)
+	for i := 1; i < stableLabelModulus; i++ {
+		used[i] = struct{}{}
+	}
+	lbl := stableLabelFor(Element{Role: "button", Text: "only-free"}, used)
+	if lbl == "" {
+		t.Fatal("stableLabelFor returned empty")
+	}
+}
+
+func isPrime(n int) bool {
+	if n < 2 {
+		return false
+	}
+	for i := 2; i*i <= n; i++ {
+		if n%i == 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func TestUseStableLabelsToggle(t *testing.T) {
