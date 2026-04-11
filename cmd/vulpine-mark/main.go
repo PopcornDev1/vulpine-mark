@@ -17,6 +17,7 @@ func main() {
 		cdp        = flag.String("cdp", "http://localhost:9222", "CDP endpoint (http://host:port or ws://...)")
 		outputPNG  = flag.String("output", "annotated.png", "Path for the annotated PNG")
 		outputJSON = flag.String("json", "", "Optional path for the element map JSON")
+		fullPage   = flag.Bool("full-page", false, "Annotate the full scrollable page instead of just the viewport")
 		quiet      = flag.Bool("quiet", false, "Suppress progress output")
 	)
 	flag.Parse()
@@ -31,7 +32,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "vulpine-mark: connected to %s\n", *cdp)
 	}
 
-	result, err := mark.Annotate()
+	var result *vulpinemark.Result
+	if *fullPage {
+		result, err = mark.AnnotateFullPage()
+	} else {
+		result, err = mark.Annotate()
+	}
 	if err != nil {
 		fail("annotate: %v", err)
 	}
