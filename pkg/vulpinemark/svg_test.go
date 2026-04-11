@@ -57,12 +57,12 @@ func TestSVGClusterOverlay(t *testing.T) {
 		{Role: "link", X: 0, Y: 60, Width: 50, Height: 20},
 		{Role: "link", X: 0, Y: 90, Width: 50, Height: 20},
 	}
-	clusters := []Cluster{{Label: "@1", Role: "link", Members: members}}
+	clusters := []Cluster{{Label: "@C1", Role: "link", Members: members}}
 	svg := renderSVGOverlay(nil, clusters, 1.0, 200, 200, DefaultPalette)
 	if !strings.Contains(svg, "stroke-dasharray") {
 		t.Error("cluster outline should be dashed")
 	}
-	if !strings.Contains(svg, ">@1[1..4]<") {
+	if !strings.Contains(svg, ">@C1[1..4]<") {
 		t.Errorf("missing cluster label: %s", svg)
 	}
 }

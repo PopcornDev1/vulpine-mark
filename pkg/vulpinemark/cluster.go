@@ -19,11 +19,12 @@ const minClusterSize = 4
 const clusterRoundPx = 8
 
 // Cluster groups visually similar repeated elements (e.g. a product grid
-// or a list of search results) under a single label like "@5". Individual
-// members are addressed via "@5[1]", "@5[2]", ... using the existing
-// Click/Type/Hover helpers.
+// or a list of search results) under a single label like "@C1". Cluster
+// labels use the "@C<N>" namespace to avoid colliding with per-element
+// labels ("@1", "@2", ...). Individual members are addressed via
+// "@C1[1]", "@C1[2]", ... using the existing Click/Type/Hover helpers.
 type Cluster struct {
-	// Label is the assigned cluster identifier, e.g. "@5".
+	// Label is the assigned cluster identifier, e.g. "@C1".
 	Label string `json:"label"`
 	// Role is the shared semantic role of the members.
 	Role string `json:"role"`
@@ -103,7 +104,7 @@ func clusterElements(els []Element) (clusters []Cluster, ungrouped []Element) {
 			return members[i].X < members[j].X
 		})
 		cl := Cluster{
-			Label:   "@" + strconv.Itoa(n+1),
+			Label:   "@C" + strconv.Itoa(n+1),
 			Role:    e.key.role,
 			Members: members,
 			BBox:    clusterBBox(members, 1.0),
@@ -146,9 +147,17 @@ func clusterBBox(members []Element, scale float64) image.Rectangle {
 	return r
 }
 
-// parseClusterRef parses a label of the form "@N[K]" into the cluster
-// label "@N" and 1-based member index K. Returns ok=false for plain
-// labels like "@7".
+// clusterLabelFor returns the cluster label "@C<n+1>" for the n-th
+// cluster. Cluster labels live in the "@C" namespace to avoid colliding
+// with per-element labels ("@1", "@2", ...).
+func clusterLabelFor(n int) string {
+	return "@C" + strconv.Itoa(n+1)
+}
+
+// parseClusterRef parses a label of the form "@C<N>[<K>]" into the
+// cluster label ("@C<N>") and 1-based member index K. Returns
+// ok=false for plain element labels like "@7" or "@C3" with no
+// bracket suffix.
 func parseClusterRef(label string) (clusterLabel string, memberIdx int, ok bool) {
 	lb := strings.IndexByte(label, '[')
 	if lb < 0 {
@@ -157,12 +166,18 @@ func parseClusterRef(label string) (clusterLabel string, memberIdx int, ok bool)
 	if !strings.HasSuffix(label, "]") {
 		return "", 0, false
 	}
+	prefix := label[:lb]
+	// Cluster labels must start with "@C" so they cannot be confused
+	// with plain element labels ("@5" vs "@C5").
+	if !strings.HasPrefix(prefix, "@C") {
+		return "", 0, false
+	}
 	inside := label[lb+1 : len(label)-1]
 	n, err := strconv.Atoi(inside)
 	if err != nil || n <= 0 {
 		return "", 0, false
 	}
-	return label[:lb], n, true
+	return prefix, n, true
 }
 
 // ErrClusterIndexOutOfRange is returned when a cluster reference like

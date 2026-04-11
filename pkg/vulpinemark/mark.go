@@ -135,7 +135,7 @@ func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage, clustered b
 		// remaining ungrouped elements labels continuing after the
 		// last cluster.
 		for i := range clusters {
-			clusters[i].Label = labelFor(i)
+			clusters[i].Label = clusterLabelFor(i)
 			clusters[i].BBox = clusterBBox(clusters[i].Members, scale)
 			for j := range clusters[i].Members {
 				clusters[i].Members[j].Label = fmt.Sprintf("%s[%d]", clusters[i].Label, j+1)
@@ -145,9 +145,10 @@ func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage, clustered b
 		if useStable {
 			assignStableLabels(ungrouped)
 		} else {
-			offset := len(clusters)
+			// Cluster labels live in a separate "@C<N>" namespace so
+			// ungrouped elements can restart at @1 without colliding.
 			for i := range ungrouped {
-				ungrouped[i].Label = labelFor(offset + i)
+				ungrouped[i].Label = labelFor(i)
 			}
 		}
 		elements = ungrouped

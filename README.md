@@ -114,17 +114,19 @@ accessed with bracket syntax.
 
 ```go
 result, err := mark.AnnotateClustered(ctx)
-// result.Clusters[0].Label == "@1"
+// result.Clusters[0].Label == "@C1"
 // result.Clusters[0].Members has N Elements
 
-// Click the 3rd item in cluster @1.
-_ = mark.Click(ctx, "@1[3]")
+// Click the 3rd item in cluster @C1.
+_ = mark.Click(ctx, "@C1[3]")
 ```
 
 The annotated image draws a single amber outline around the union of
-all cluster members plus one `@N[1..count]` badge at the top-left,
-instead of one badge per member. Elements that don't fit any cluster
-are labeled individually as before.
+all cluster members plus one `@C<N>[1..count]` badge at the top-left,
+instead of one badge per member. Cluster labels use the `@C<N>`
+namespace so they never collide with ungrouped element labels
+(`@1`, `@2`, ...). Elements that don't fit any cluster are labeled
+individually as before.
 
 ### Diff mode
 
