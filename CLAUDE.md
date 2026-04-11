@@ -12,6 +12,12 @@ Standalone Go library + CLI that annotates browser screenshots with numbered bad
   - `screenshot.go` — `Page.captureScreenshot` + `Page.getLayoutMetrics`
   - `annotate.go` — Go `image/draw` + `x/image/font/basicfont` for borders + numbered badges
   - `mark.go` — top-level `Mark.Annotate()` API
+  - `actions.go` — click/type/hover helpers driven by labels
+  - `cluster.go` — cluster mode: group repeated items under `@N[K]` labels
+  - `diff.go` — diff mode: annotate only what changed between two snapshots
+  - `palette.go` — palette packs (default / high-contrast / monochrome / colorblind)
+  - `svg.go` — SVG overlay output (`AnnotateSVG`)
+  - `stable_labels.go` — stable semantic-hash label IDs
 - `cmd/vulpine-mark/` — CLI binary
 
 ## Build / test
