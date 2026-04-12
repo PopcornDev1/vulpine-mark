@@ -211,6 +211,79 @@ mark.SetMaxElements(20)
 // or --max-elements 20
 ```
 
+### Heatmap mode
+
+Instead of discrete numbered badges, `AnnotateHeatmap` renders a
+translucent overlay whose alpha is proportional to each element's
+importance (`confidence * log(area + 1)`), normalized across the
+returned set so the single most prominent element always saturates the
+palette. Useful for visual triage at a glance — "where should the
+agent look first?"
+
+```go
+result, _ := mark.AnnotateHeatmap(ctx)
+os.WriteFile("heatmap.png", result.Image, 0o644)
+```
+
+Or from the CLI:
+
+```bash
+vulpine-mark --heatmap --output heatmap.png
+```
+
+The heatmap honors the currently-configured palette and any
+`SetElementFilter` callback, so role-restricted heatmaps work out of
+the box:
+
+```go
+mark.SetElementFilter(vulpinemark.IncludeRoles("button", "link"))
+result, _ := mark.AnnotateHeatmap(ctx)
+```
+
+### JSON-only mode
+
+When you only need the structured element list (e.g. feeding a
+text-only LLM or building a selector index), skip screenshot capture
+entirely:
+
+```go
+result, _ := mark.AnnotateJSON(ctx)
+// result.Image == nil
+// result.Elements, result.Labels populated as usual
+```
+
+From the CLI, `--json-only` writes the element map to `--json` (or to
+stdout if no JSON path is given) and never touches `--output`:
+
+```bash
+vulpine-mark --json-only > elements.json
+```
+
+### Element filter callbacks
+
+For fine-grained control over which elements get labeled, pass a
+custom `ElementFilter`. It runs after enumeration and visibility /
+occlusion checks.
+
+```go
+mark.SetElementFilter(func(el vulpinemark.Element) bool {
+    return el.Role == "button" && el.Confidence > 0.5
+})
+```
+
+Two helpers ship for the common cases:
+
+```go
+mark.SetElementFilter(vulpinemark.IncludeRoles("button", "link"))
+mark.SetElementFilter(vulpinemark.ExcludeRoles("checkbox", "radio"))
+```
+
+From the CLI:
+
+```bash
+vulpine-mark --include-role button,link --exclude-role checkbox
+```
+
 ### Confidence scores
 
 Every `Element` returned by the library carries a `Confidence` field

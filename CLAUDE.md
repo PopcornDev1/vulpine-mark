@@ -18,6 +18,9 @@ Standalone Go library + CLI that annotates browser screenshots with numbered bad
   - `palette.go` — palette packs (default / high-contrast / monochrome / colorblind)
   - `svg.go` — SVG overlay output (`AnnotateSVG`)
   - `stable_labels.go` — stable semantic-hash label IDs
+  - `heatmap.go` — heatmap mode (`AnnotateHeatmap`, translucent importance fills)
+  - `json_output.go` — JSON-only mode (`AnnotateJSON`, no screenshot capture)
+  - `filter.go` — custom `ElementFilter` callbacks + `IncludeRoles`/`ExcludeRoles`
 - `cmd/vulpine-mark/` — CLI binary
 
 ## Build / test
@@ -50,9 +53,12 @@ go test ./...
 - [x] Cluster mode: group repeated items under `@N[K]` labels
 - [x] Diff mode: annotate only what changed between two snapshots
 - [x] Per-label confidence score + low-confidence fade
-- [x] Output formats: SVG overlay (`AnnotateSVG`, `--svg`); JSON-only mode, base64 stdout still TODO
+- [x] Output formats: SVG overlay (`AnnotateSVG`, `--svg`) + JSON-only mode (`AnnotateJSON`, `--json-only`); base64 stdout still TODO
 - [x] Palette packs: default / high-contrast / monochrome / colorblind (`SetPalette`, `--palette`)
 - [x] Stable semantic-hash labels (`UseStableLabels`)
+- [x] Heatmap mode: translucent importance-weighted fills (`AnnotateHeatmap`, `--heatmap`)
+- [x] Custom element filter callbacks (`SetElementFilter`, `--include-role`, `--exclude-role`)
+- [x] Real-page flow test (always-on, covers annotate + click + type + hover dispatch)
 - [x] CLI: `--max-elements`, `--clustered`, `--diff`, `--save-result` (selectors still TODO)
 - [ ] Doc: example annotated PNG in README
 - [ ] GitHub Actions CI (build, vet, test on linux/macos)
