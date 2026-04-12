@@ -69,6 +69,34 @@ func TestLoadSavedResult_MissingFile(t *testing.T) {
 	}
 }
 
+func TestBuildFilter_IncludeExcludeCombination(t *testing.T) {
+	// No flags -> nil filter.
+	if f := buildFilter("", ""); f != nil {
+		t.Error("empty flags should yield nil filter")
+	}
+	// Include only.
+	f := buildFilter("button,link", "")
+	if f == nil || !f(vulpinemark.Element{Role: "button"}) || f(vulpinemark.Element{Role: "input"}) {
+		t.Error("include filter misbehaved")
+	}
+	// Exclude only.
+	f = buildFilter("", "checkbox, radio ")
+	if f == nil || !f(vulpinemark.Element{Role: "button"}) || f(vulpinemark.Element{Role: "checkbox"}) {
+		t.Error("exclude filter misbehaved")
+	}
+	// Combined: include wins if set, exclude trims further.
+	f = buildFilter("button,link", "link")
+	if !f(vulpinemark.Element{Role: "button"}) {
+		t.Error("button should survive combined filter")
+	}
+	if f(vulpinemark.Element{Role: "link"}) {
+		t.Error("link should be excluded by combined filter")
+	}
+	if f(vulpinemark.Element{Role: "input"}) {
+		t.Error("input should not be included by combined filter")
+	}
+}
+
 func TestLoadSavedResult_BadJSON(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "bad.json")

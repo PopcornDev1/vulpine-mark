@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/PopcornDev1/vulpine-mark/pkg/vulpinemark"
@@ -36,6 +37,10 @@ func main() {
 		diffPath    = flag.String("diff", "", "Path to a previous --save-result JSON; annotate only changed elements")
 		savePath    = flag.String("save-result", "", "Path to save the result as JSON for later --diff use")
 		maxElements = flag.Int("max-elements", 0, "Maximum number of elements to label (lowest confidence dropped first). 0 disables the cap.")
+		heatmap     = flag.Bool("heatmap", false, "Render a heatmap overlay (translucent fills weighted by importance) instead of numbered badges")
+		jsonOnly    = flag.Bool("json-only", false, "Skip screenshot capture entirely; output only the element map JSON")
+		includeRole = flag.String("include-role", "", "Comma-separated roles to include (e.g. button,link). All roles kept if empty.")
+		excludeRole = flag.String("exclude-role", "", "Comma-separated roles to exclude (e.g. checkbox,radio). Applied after include.")
 		quiet       = flag.Bool("quiet", false, "Suppress progress output")
 	)
 	flag.Parse()
@@ -59,6 +64,10 @@ func main() {
 		mark.SetMaxElements(*maxElements)
 	}
 
+	if f := buildFilter(*includeRole, *excludeRole); f != nil {
+		mark.SetElementFilter(f)
+	}
+
 	if !*quiet {
 		fmt.Fprintf(os.Stderr, "vulpine-mark: connected to %s\n", *cdp)
 	}
@@ -73,6 +82,10 @@ func main() {
 
 	var result *vulpinemark.Result
 	switch {
+	case *jsonOnly:
+		result, err = mark.AnnotateJSON(ctx)
+	case *heatmap:
+		result, err = mark.AnnotateHeatmap(ctx)
 	case prev != nil:
 		result, err = mark.AnnotateDiff(ctx, prev)
 	case *clustered:
@@ -88,8 +101,10 @@ func main() {
 		fail("annotate: %v", err)
 	}
 
-	if err := os.WriteFile(*outputPNG, result.Image, 0o644); err != nil {
-		fail("write %s: %v", *outputPNG, err)
+	if !*jsonOnly {
+		if err := os.WriteFile(*outputPNG, result.Image, 0o644); err != nil {
+			fail("write %s: %v", *outputPNG, err)
+		}
 	}
 
 	if *outputSVG != "" && result.SVG != "" {
@@ -105,6 +120,16 @@ func main() {
 		}
 		if err := os.WriteFile(*outputJSON, data, 0o644); err != nil {
 			fail("write %s: %v", *outputJSON, err)
+		}
+	} else if *jsonOnly {
+		// --json-only with no --json path: emit to stdout so the
+		// command composes cleanly in shell pipelines.
+		data, err := json.MarshalIndent(result.Elements, "", "  ")
+		if err != nil {
+			fail("encode json: %v", err)
+		}
+		if _, err := os.Stdout.Write(append(data, '\n')); err != nil {
+			fail("write stdout: %v", err)
 		}
 	}
 
@@ -124,6 +149,11 @@ func main() {
 	}
 
 	if !*quiet {
+		if *jsonOnly {
+			fmt.Fprintf(os.Stderr, "vulpine-mark: %d elements enumerated (json-only)\n",
+				len(result.Labels))
+			return
+		}
 		fmt.Fprintf(os.Stderr, "vulpine-mark: %d elements labeled, wrote %s",
 			len(result.Labels), *outputPNG)
 		if *outputJSON != "" {
@@ -153,6 +183,45 @@ func loadSavedResult(path string) (*vulpinemark.Result, error) {
 		Labels:   sr.Labels,
 		Clusters: sr.Clusters,
 	}, nil
+}
+
+// buildFilter translates the --include-role / --exclude-role CLI
+// flags into a single ElementFilter. Returns nil when both flags are
+// empty so the Mark uses no filter at all.
+func buildFilter(include, exclude string) vulpinemark.ElementFilter {
+	var filters []vulpinemark.ElementFilter
+	if include = strings.TrimSpace(include); include != "" {
+		filters = append(filters, vulpinemark.IncludeRoles(splitCSV(include)...))
+	}
+	if exclude = strings.TrimSpace(exclude); exclude != "" {
+		filters = append(filters, vulpinemark.ExcludeRoles(splitCSV(exclude)...))
+	}
+	switch len(filters) {
+	case 0:
+		return nil
+	case 1:
+		return filters[0]
+	}
+	fs := filters
+	return func(el vulpinemark.Element) bool {
+		for _, f := range fs {
+			if !f(el) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+func splitCSV(s string) []string {
+	parts := strings.Split(s, ",")
+	out := parts[:0]
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func fail(format string, args ...interface{}) {
