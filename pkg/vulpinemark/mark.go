@@ -24,6 +24,7 @@ type Mark struct {
 	paletteSet   bool
 	maxElements  int
 	stableLabels bool
+	filter       ElementFilter
 }
 
 // Result is the output of a single Annotate call.
@@ -125,7 +126,18 @@ func (m *Mark) annotate(ctx context.Context, viewportOnly, fullPage, clustered b
 	m.mu.Lock()
 	maxEls := m.maxElements
 	useStable := m.stableLabels
+	filter := m.filter
 	m.mu.Unlock()
+
+	if filter != nil {
+		kept := elements[:0]
+		for _, e := range elements {
+			if filter(e) {
+				kept = append(kept, e)
+			}
+		}
+		elements = kept
+	}
 
 	var clusters []Cluster
 	if clustered {
