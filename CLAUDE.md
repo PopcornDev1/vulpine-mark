@@ -39,6 +39,12 @@ go test ./...
 - The native Juggler implementation lives in VulpineOS itself (private). This repo is the standalone CDP version only.
 - Autonomous /loop mode: never ask permission, act and document in commits.
 
+## Coordination and local tooling
+
+- Linear is the shared execution tracker for the VulpineOS ecosystem. Use the `VulpineOS` workspace, product/type/source labels, and link commits in issue comments when closing work.
+- Codex has a persistent local Playwright MCP at `http://localhost:8931/mcp` for browser navigation, snapshots, console/network inspection, and screenshots. It writes artifacts to `~/.codex/mcp-output/playwright` and omits inline image payloads to reduce token usage.
+- For visual/browser verification, prefer saved snapshots and screenshot filenames over pasting large page dumps or image data into chat.
+
 ## Roadmap (MVP done; what's next)
 
 - [x] Real-page integration test (fake CDP transport, gated on `-tags integration`)
