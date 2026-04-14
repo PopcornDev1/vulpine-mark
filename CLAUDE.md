@@ -2,7 +2,7 @@
 
 Standalone Go library + CLI that annotates browser screenshots with numbered badges (`@1`, `@2`...) over interactive elements via CDP. Public open-source repo, drives adoption of the wider VulpineOS ecosystem.
 
-**Repo:** `PopcornDev1/vulpine-mark` (public, MIT)
+**Repo:** `VulpineOS/vulpine-mark` (public, MIT)
 
 ## Layout
 
@@ -33,7 +33,7 @@ go test ./...
 
 ## Hard rules
 
-- Push only to `PopcornDev1/vulpine-mark`. Never touch `CloverLabsAI` or any other org.
+- Push only to `VulpineOS/vulpine-mark`. Never touch `CloverLabsAI` or any other org.
 - One-line commit messages, no co-authors, push after every cohesive change.
 - This repo is **public** — no proprietary VulpineOS internals here. Don't reference any private VulpineOS internals or private patches in code or docs.
 - The native Juggler implementation lives in VulpineOS itself (private). This repo is the standalone CDP version only.

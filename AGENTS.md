@@ -2,7 +2,7 @@
 
 Standalone Go library + CLI that annotates browser screenshots with numbered badges (`@1`, `@2`...) over interactive elements via CDP. Public open-source repo, drives adoption of the wider VulpineOS ecosystem.
 
-**Repo:** `PopcornDev1/vulpine-mark` (public, MIT)
+**Repo:** `VulpineOS/vulpine-mark` (public, MIT)
 
 ## Layout
 
@@ -33,7 +33,7 @@ go test ./...
 
 ## Hard rules
 
-- Push only to `PopcornDev1/vulpine-mark`. Never touch `CloverLabsAI` or any other org.
+- Push only to `VulpineOS/vulpine-mark`. Never touch `CloverLabsAI` or any other org.
 - One-line commit messages, no co-authors, push after every cohesive change.
 - This repo is **public** — no proprietary VulpineOS internals here. Don't reference any private VulpineOS internals or private patches in code or docs.
 - The native Juggler implementation lives in VulpineOS itself (private). This repo is the standalone CDP version only.
@@ -83,9 +83,9 @@ This section captures cross-session preferences. Treat them as binding unless th
 
 ### GitHub rules
 
-- **Only push to repos on `PopcornDev1/`.** Never push to any organization. Specifically: never create, fork, or commit to `CloverLabsAI` — that is the user's employer and unauthorized changes cause real problems.
+- **Only push to repos on `VulpineOS/`.** Never push to `CloverLabsAI` or any unrelated organization.
 - Approved public repos you may interact with: `VulpineOS`, `vulpine-mark`, `foxbridge`, `vulpineos-docs`, `mobilebridge`.
-- Before pushing, verify visibility: `gh repo view PopcornDev1/<name> --json visibility`.
+- Before pushing, verify visibility: `gh repo view VulpineOS/<name> --json visibility`.
 - This repo is **public**. Do not reference proprietary sibling modules or private implementation details in any tracked file.
 
 ### Commit rules

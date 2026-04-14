@@ -13,7 +13,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/PopcornDev1/vulpine-mark/pkg/vulpinemark"
+	"github.com/VulpineOS/vulpine-mark/pkg/vulpinemark"
 )
 
 // savedResult is the on-disk form of a vulpinemark.Result. Only the

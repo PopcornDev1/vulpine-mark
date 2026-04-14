@@ -22,7 +22,7 @@ Vulpine Mark is the first **standalone**, **GPU-free**, **browser-agnostic** SoM
 ## Install
 
 ```bash
-go install github.com/PopcornDev1/vulpine-mark/cmd/vulpine-mark@latest
+go install github.com/VulpineOS/vulpine-mark/cmd/vulpine-mark@latest
 ```
 
 ## CLI usage
@@ -37,7 +37,7 @@ vulpine-mark --cdp http://localhost:9222 --output annotated.png --json elements.
 ```go
 import (
     "context"
-    "github.com/PopcornDev1/vulpine-mark/pkg/vulpinemark"
+    "github.com/VulpineOS/vulpine-mark/pkg/vulpinemark"
 )
 
 ctx := context.Background()
@@ -64,7 +64,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/PopcornDev1/vulpine-mark/pkg/vulpinemark"
+	"github.com/VulpineOS/vulpine-mark/pkg/vulpinemark"
 )
 
 func main() {

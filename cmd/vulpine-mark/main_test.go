@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/PopcornDev1/vulpine-mark/pkg/vulpinemark"
+	"github.com/VulpineOS/vulpine-mark/pkg/vulpinemark"
 )
 
 func TestSaveLoadResultRoundTrip(t *testing.T) {
