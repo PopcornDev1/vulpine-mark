@@ -294,7 +294,7 @@ cautious about acting on them.
 
 ## Status
 
-Early MVP. Currently supports Chrome and Camoufox/foxbridge over CDP WebSocket. iOS Safari support is on the roadmap via [MobileBridge](https://github.com/PopcornDev1/mobilebridge).
+Early MVP. Currently supports Chrome and Camoufox/foxbridge over CDP WebSocket. iOS Safari support is on the roadmap via [MobileBridge](https://github.com/VulpineOS/mobilebridge).
 
 ## License
 
