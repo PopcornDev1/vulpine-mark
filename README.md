@@ -10,6 +10,19 @@ Agents that drive browsers from screenshots alone are bad at clicking. Microsoft
 
 Vulpine Mark is the first **standalone**, **GPU-free**, **browser-agnostic** SoM tool. It reads element positions directly from the live DOM via CDP and paints labels in pure Go — no ML models, no GPU, no JS injection beyond a single `Runtime.evaluate` call.
 
+## Release status
+
+`vulpine-mark` is the open-source Set-of-Mark library in the VulpineOS
+stack. The `v0.1.x` line is intended to stay small and reusable:
+
+- standalone Go package + CLI
+- CDP-driven element enumeration
+- image and structured output generation
+- no tenant, billing, or hosted-browser concerns
+
+For release notes, see [CHANGELOG.md](CHANGELOG.md). For the release
+checklist used for tags, see [RELEASING.md](RELEASING.md).
+
 ## Features
 
 - **Zero ML overhead** — reads bounding rects from the DOM, draws PNG labels in Go
@@ -30,6 +43,15 @@ go install github.com/VulpineOS/vulpine-mark/cmd/vulpine-mark@latest
 ```bash
 # Connect to a running browser, annotate the active page
 vulpine-mark --cdp http://localhost:9222 --output annotated.png --json elements.json
+
+# Full-page capture with stable labels and a max-element cap
+vulpine-mark \
+  --cdp http://localhost:9222 \
+  --full-page \
+  --max-elements 25 \
+  --palette colorblind \
+  --output annotated.png \
+  --json elements.json
 ```
 
 ## Library usage
