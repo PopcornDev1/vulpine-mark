@@ -296,6 +296,20 @@ cautious about acting on them.
 
 Early MVP. Currently supports Chrome and Camoufox/foxbridge over CDP WebSocket. iOS Safari support is on the roadmap via [MobileBridge](https://github.com/VulpineOS/mobilebridge).
 
+## Service integration
+
+`vulpine-mark` is intentionally the browser-facing labeling library, not
+the hosted API implementation. If you are wiring it into a service, the
+recommended boundary is:
+
+1. your service owns browser/session lifecycle
+2. your service resolves a page websocket URL
+3. `vulpine-mark` connects to that page and returns labels + image data
+4. your service maps that result into its own endpoint contract
+
+The public adapter spec used by Vulpine API is documented in
+[docs/visual-extraction-api-adapter.md](docs/visual-extraction-api-adapter.md).
+
 ## License
 
 MIT
