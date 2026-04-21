@@ -54,6 +54,26 @@ vulpine-mark \
   --json elements.json
 ```
 
+## Demo pages
+
+The repo ships deterministic demo pages under [`docs/demo-pages`](docs/demo-pages)
+for validating the main output modes:
+
+- `stability.html` — repeated controls for label-stability checks
+- `dpr.html` — compact controls for retina / zoom badge placement
+- `full-page.html` — below-the-fold sections for scroll-and-stitch capture
+- `clustered-catalog.html` — repeated cards for cluster-mode verification
+- `diff-modal.html` — click-triggered modal for diff-only labeling
+
+Serve them locally with:
+
+```bash
+python3 -m http.server 8123 --directory docs/demo-pages
+```
+
+Then navigate a CDP browser to `http://127.0.0.1:8123/index.html` and point
+`vulpine-mark` at the active page.
+
 ## Library usage
 
 ```go

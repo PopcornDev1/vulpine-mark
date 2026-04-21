@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vulpine Mark Demo Pages</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M18 18h28v8H30v8h12v8H30v14h-8V18Z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./shared.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="hero">
+      <div>
+        <h1>Vulpine Mark Demo Pages</h1>
+        <p>Deterministic pages for validating label stability, device-pixel-ratio handling, full-page capture, clustering, and diff-only labeling.</p>
+      </div>
+      <span class="chip">Static HTML · no framework runtime</span>
+    </div>
+
+    <div class="demo-note">
+      Serve this directory locally with <code>python3 -m http.server 8123 --directory docs/demo-pages</code>, point a CDP browser at it, then run <code>vulpine-mark</code> against the active page.
+    </div>
+
+    <div class="bench-list">
+      <div class="card">
+        <h2><a href="./stability.html">Label Stability</a></h2>
+        <p class="muted">Fixed layout with toolbars, links, forms, and cards. Use it to compare stable-label output across repeat captures.</p>
+      </div>
+      <div class="card">
+        <h2><a href="./dpr.html">DPR and Fine Controls</a></h2>
+        <p class="muted">Compact controls, narrow gutters, and small targets for verifying retina scaling and badge placement.</p>
+      </div>
+      <div class="card">
+        <h2><a href="./full-page.html">Full-Page Capture</a></h2>
+        <p class="muted">A tall, sectioned page with interactive elements below the fold for scroll-and-stitch testing.</p>
+      </div>
+      <div class="card">
+        <h2><a href="./clustered-catalog.html">Clustered Catalog</a></h2>
+        <p class="muted">Repeated product cards designed to collapse under cluster mode instead of producing label soup.</p>
+      </div>
+      <div class="card">
+        <h2><a href="./diff-modal.html">Diff and Modal Changes</a></h2>
+        <p class="muted">Click-to-open modal plus layout changes so <code>AnnotateDiff</code> can focus on only the new or moved UI.</p>
+      </div>
+      <div class="card">
+        <h2><a href="./README.md">Usage Notes</a></h2>
+        <p class="muted">Benchmark checklist, recommended commands, and what each page is meant to prove.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

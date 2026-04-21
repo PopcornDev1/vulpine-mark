@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vulpine Mark Demo — Label Stability</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M18 18h28v8H30v8h12v8H30v14h-8V18Z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./shared.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="hero">
+      <div>
+        <h1>Label Stability</h1>
+        <p>Use this page to compare repeated captures with and without stable-label mode. The structure stays fixed across reloads.</p>
+      </div>
+      <div class="nav">
+        <a href="./index.html">Back to index</a>
+        <a href="./dpr.html">Next: DPR</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <aside class="sidebar card">
+        <h2>Collections</h2>
+        <ul>
+          <li><a href="#alpha">Alpha Queue</a></li>
+          <li><a href="#billing">Billing Controls</a></li>
+          <li><a href="#reports">Reports</a></li>
+          <li><a href="#notes">Notes</a></li>
+        </ul>
+      </aside>
+
+      <main class="stack">
+        <section class="panel">
+          <div class="toolbar spread">
+            <div>
+              <h2 id="alpha">Alpha Queue</h2>
+              <p class="muted">Repeated captures should keep the same labels on these controls when stable-label mode is enabled.</p>
+            </div>
+            <div class="toolbar">
+              <button>Approve Queue</button>
+              <button class="secondary">Reassign Tasks</button>
+              <a class="button-link secondary" href="#reports">Open Reports</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid three">
+          <article class="metric card">
+            <div class="label">Ready</div>
+            <div class="value">18</div>
+            <div class="meta"><a href="#reports">View ready items</a></div>
+          </article>
+          <article class="metric card">
+            <div class="label">Escalations</div>
+            <div class="value">4</div>
+            <div class="meta"><button class="ghost">Review escalations</button></div>
+          </article>
+          <article class="metric card">
+            <div class="label">Operators</div>
+            <div class="value">6</div>
+            <div class="meta"><a href="#billing">Manage roster</a></div>
+          </article>
+        </section>
+
+        <section class="panel">
+          <h2 id="billing">Billing Controls</h2>
+          <div class="form-grid two">
+            <label>
+              Workspace name
+              <input type="text" value="Northwind Labs" readonly>
+            </label>
+            <label>
+              Default region
+              <select>
+                <option>ap-southeast-2</option>
+                <option>us-east-1</option>
+              </select>
+            </label>
+            <label>
+              Invoice contact
+              <input type="email" value="billing@example.com" readonly>
+            </label>
+            <label>
+              Approval mode
+              <select>
+                <option>Operator review</option>
+                <option>Auto-approve safe actions</option>
+              </select>
+            </label>
+          </div>
+          <div class="toolbar" style="margin-top: 16px;">
+            <button>Save Settings</button>
+            <button class="secondary">Preview Invoice</button>
+            <button class="ghost">Reset Draft</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2 id="reports">Reports</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Queue</th>
+                <th>Status</th>
+                <th>Owner</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Alpha Queue</td>
+                <td><span class="badge success">Healthy</span></td>
+                <td>A. Rivers</td>
+                <td><button class="secondary">Open Summary</button></td>
+              </tr>
+              <tr>
+                <td>Delta Queue</td>
+                <td><span class="badge warning">Needs Review</span></td>
+                <td>M. Patel</td>
+                <td><button class="secondary">Open Summary</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="panel">
+          <h2 id="notes">Notes</h2>
+          <label>
+            Operator notes
+            <textarea readonly>Use this page to verify that text fields, buttons, and links keep consistent labels across multiple annotations.</textarea>
+          </label>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

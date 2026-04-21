@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vulpine Mark Demo — Diff and Modal Changes</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M18 18h28v8H30v8h12v8H30v14h-8V18Z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./shared.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="hero">
+      <div>
+        <h1>Diff and Modal Changes</h1>
+        <p>Take one baseline capture, click the launch button, then run diff mode to verify that only the new modal and moved summary elements are labeled.</p>
+      </div>
+      <div class="nav">
+        <a href="./index.html">Back to index</a>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="toolbar spread">
+        <div>
+          <h2>Baseline view</h2>
+          <p class="muted">The badge, summary card, and action row change when the modal opens.</p>
+        </div>
+        <div class="toolbar">
+          <button id="launch-modal">Launch approval modal</button>
+          <button class="secondary" id="shuffle-summary">Shuffle summary</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid two" style="margin-top: 16px;">
+      <article class="panel">
+        <h2>Status summary</h2>
+        <div class="stack" id="summary-stack">
+          <div class="badge success" id="summary-badge">Ready for review</div>
+          <button>Inspect queue</button>
+          <a class="button-link secondary" href="#footer">Jump to footer</a>
+        </div>
+      </article>
+      <article class="panel" id="footer">
+        <h2>Notes</h2>
+        <label>
+          Reviewer comment
+          <textarea readonly>After the modal opens, diff mode should highlight the new dialog actions and any moved summary controls.</textarea>
+        </label>
+      </article>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="approval-modal" aria-hidden="true">
+    <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h2 id="modal-title">Approve risky action</h2>
+      <p class="muted">This modal appears only after interaction, which makes it useful for diff-only annotation tests.</p>
+      <div class="form-grid">
+        <label>
+          Approval reason
+          <input type="text" value="Operator override" readonly>
+        </label>
+        <label>
+          Expiry
+          <select><option>30 minutes</option></select>
+        </label>
+      </div>
+      <div class="toolbar" style="margin-top: 16px;">
+        <button>Approve now</button>
+        <button class="secondary" id="close-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const modal = document.getElementById('approval-modal');
+    const badge = document.getElementById('summary-badge');
+    const stack = document.getElementById('summary-stack');
+
+    document.getElementById('launch-modal').addEventListener('click', () => {
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      badge.textContent = 'Modal launched';
+      badge.className = 'badge danger';
+    });
+
+    document.getElementById('close-modal').addEventListener('click', () => {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+      badge.textContent = 'Ready for review';
+      badge.className = 'badge success';
+    });
+
+    document.getElementById('shuffle-summary').addEventListener('click', () => {
+      const button = stack.querySelector('button');
+      stack.appendChild(button);
+      badge.textContent = 'Summary moved';
+      badge.className = 'badge warning';
+    });
+  </script>
+</body>
+</html>

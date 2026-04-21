@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vulpine Mark Demo — Full-Page Capture</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M18 18h28v8H30v8h12v8H30v14h-8V18Z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./shared.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="hero">
+      <div>
+        <h1>Full-Page Capture</h1>
+        <p>A tall page with controls spread across multiple sections so full-page mode has to stitch content below the fold.</p>
+      </div>
+      <div class="nav">
+        <a href="./index.html">Back to index</a>
+        <a href="./clustered-catalog.html">Next: Clustered catalog</a>
+      </div>
+    </div>
+
+    <div class="tall-sections">
+      <section class="tall-card card">
+        <h2>Section 1 — Overview</h2>
+        <p class="muted">This section starts above the fold.</p>
+        <div class="toolbar">
+          <button>Open overview</button>
+          <a class="button-link secondary" href="#section-3">Jump to section 3</a>
+          <button class="secondary">Export</button>
+        </div>
+      </section>
+
+      <section class="tall-card card" id="section-2">
+        <h2>Section 2 — Review queue</h2>
+        <p class="muted">This section should land mid-stitch on a typical laptop viewport.</p>
+        <div class="form-grid two">
+          <label>
+            Queue owner
+            <input type="text" value="M. Chen" readonly>
+          </label>
+          <label>
+            Review mode
+            <select><option>Escalations only</option></select>
+          </label>
+        </div>
+        <div class="toolbar" style="margin-top: 16px;">
+          <button>Approve batch</button>
+          <button class="warning">Flag for review</button>
+        </div>
+      </section>
+
+      <section class="tall-card card" id="section-3">
+        <h2>Section 3 — Deep content</h2>
+        <p class="muted">Interactive elements below the fold should still be labeled in full-page mode.</p>
+        <div class="toolbar">
+          <a class="button-link secondary" href="#section-5">Jump to section 5</a>
+          <button class="secondary">Load report</button>
+          <button>Sync now</button>
+        </div>
+      </section>
+
+      <section class="tall-card card" id="section-4">
+        <h2>Section 4 — Notes</h2>
+        <label>
+          Analyst notes
+          <textarea readonly>Use this page with --full-page to confirm off-viewport labels survive the stitched output.</textarea>
+        </label>
+      </section>
+
+      <section class="tall-card card" id="section-5">
+        <h2>Section 5 — Footer actions</h2>
+        <p class="muted">This final section should be invisible in viewport-only mode.</p>
+        <div class="toolbar">
+          <button>Finalize review</button>
+          <button class="secondary">Save draft</button>
+          <a class="button-link secondary" href="#section-2">Back to review queue</a>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

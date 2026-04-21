@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vulpine Mark Demo — DPR and Fine Controls</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M18 18h28v8H30v8h12v8H30v14h-8V18Z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./shared.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="hero">
+      <div>
+        <h1>DPR and Fine Controls</h1>
+        <p>Compact spacing and small controls make badge placement errors obvious on high-DPR displays.</p>
+      </div>
+      <div class="nav">
+        <a href="./index.html">Back to index</a>
+        <a href="./full-page.html">Next: Full page</a>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="toolbar spread">
+        <div>
+          <h2>Dense control strip</h2>
+          <p class="muted">Capture this page at different browser zoom levels or retina settings and compare label placement.</p>
+        </div>
+        <span class="badge success">Fixed geometry</span>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top: 16px;">
+      <div class="fine-grid">
+        <button>Run</button>
+        <button class="secondary">Skip</button>
+        <a class="button-link secondary" href="#filters">Jump</a>
+        <input type="text" value="search term" readonly>
+        <select><option>Newest first</option></select>
+        <button class="ghost">Reset</button>
+
+        <button>Save</button>
+        <button class="secondary">Retry</button>
+        <a class="button-link secondary" href="#summary">Summary</a>
+        <input type="text" value="alpha-42" readonly>
+        <select><option>Any status</option></select>
+        <button class="danger">Delete</button>
+      </div>
+    </section>
+
+    <section class="grid two" style="margin-top: 16px;">
+      <article class="panel" id="filters">
+        <h2>Filters</h2>
+        <div class="form-grid">
+          <label>
+            Region
+            <select>
+              <option>APAC</option>
+              <option>Europe</option>
+            </select>
+          </label>
+          <label>
+            Owner
+            <input type="text" value="Unassigned" readonly>
+          </label>
+          <label>
+            Match exact phrase
+            <input type="checkbox" checked>
+          </label>
+        </div>
+      </article>
+
+      <article class="panel" id="summary">
+        <h2>Summary</h2>
+        <p class="muted">Text, selects, inputs, and small buttons are intentionally packed close together here.</p>
+        <div class="toolbar">
+          <button>Open Result</button>
+          <button class="secondary">Share</button>
+          <button class="ghost">Archive</button>
+        </div>
+      </article>
+    </section>
+  </div>
+</body>
+</html>
