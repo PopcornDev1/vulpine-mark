@@ -54,6 +54,9 @@ vulpine-mark \
   --json elements.json
 ```
 
+Add `--quiet` when scripting if you want to suppress the CLI progress lines on
+stderr and keep only the requested output artifacts.
+
 ## Demo pages
 
 The repo ships deterministic demo pages under [`docs/demo-pages`](docs/demo-pages)
